@@ -1,0 +1,2687 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Controle de Gastos</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#212120">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --paper:#F5F5F3;
+    --paper-deep:#E9E9E5;
+    --line:#D8D7D1;
+    --ink:#212120;
+    --ink-soft:#68675F;
+    --white:#FFFFFF;
+    --matheus:#1B3A6B;
+    --matheus-soft:#E7EEF8;
+    --andreia:#A32A63;
+    --andreia-soft:#FBEAF1;
+    --gold:#5B6E8C;
+    --green:#3F7A54;
+    --green-soft:#E7F1EA;
+    --red:#B23B2E;
+    --red-soft:#F8E9E6;
+    --accent:var(--ink);
+    --bar-bg:#241F16;
+    --bar-text:#B8AF9C;
+    --radius:16px;
+  }
+
+  body.dark{
+    --paper:#19191A;
+    --paper-deep:#101011;
+    --line:#38373A;
+    --ink:#EDEDEB;
+    --ink-soft:#A9A8A2;
+    --white:#232324;
+    --matheus-soft:#1E2B41;
+    --andreia-soft:#3A1E2C;
+    --gold:#8FA6CC;
+    --green:#63B285;
+    --green-soft:#1D2C22;
+    --red:#E37768;
+    --red-soft:#332019;
+    --bar-bg:#0E0C09;
+    --bar-text:#9C927B;
+  }
+
+  /* fundo muda de verdade quando troca de aba/pessoa */
+  body.tema-p1{ --accent:var(--matheus); }
+  body.tema-p2{ --accent:var(--andreia); }
+  body.tema-metas{ --accent:var(--gold); }
+  body.tema-historico{ --accent:var(--ink); }
+
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+
+  body{
+    margin:0;
+    background:var(--paper-deep);
+    font-family:'IBM Plex Sans',sans-serif;
+    color:var(--ink);
+    display:flex;
+    justify-content:center;
+    transition:background .35s ease,color .35s ease;
+  }
+
+  #app{
+    width:100%;
+    max-width:460px;
+    min-height:100vh;
+    background:var(--paper);
+    position:relative;
+    padding-bottom:92px;
+    transition:background .35s ease;
+    overflow-x:hidden;
+  }
+
+  button{-webkit-tap-highlight-color:transparent;transition:transform .12s ease;}
+  button:active{transform:scale(.94);}
+
+  @keyframes cardIn{ from{opacity:0;transform:translateY(12px);} to{opacity:1;transform:translateY(0);} }
+  @keyframes viewIn{ from{opacity:0;transform:translateX(10px);} to{opacity:1;transform:translateX(0);} }
+  @keyframes popIn{ from{opacity:0;transform:scale(.9);} to{opacity:1;transform:scale(1);} }
+  @keyframes pulseSuave{ 0%{transform:scale(1);} 50%{transform:scale(1.03);} 100%{transform:scale(1);} }
+
+  /* ---------- HEADER ---------- */
+  header{
+    padding:22px 22px 18px;
+    background:var(--paper);
+    border-bottom:2px solid var(--accent);
+    position:relative;
+    transition:border-color .35s ease,background .35s ease;
+  }
+  header::after{
+    content:"";
+    position:absolute;
+    left:22px; right:22px; bottom:-6px;
+    height:1px;
+    background:var(--accent);
+    opacity:.35;
+  }
+  .header-topo{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:8px;
+    margin-bottom:12px;
+  }
+  .mes-nav{
+    flex:1;
+    display:flex;
+    align-items:center;
+    gap:4px;
+    min-width:0;
+  }
+  .mes-nav button.seta{
+    border:none;background:none;color:var(--ink-soft);
+    font-size:19px;padding:4px 6px;cursor:pointer;flex:none;
+  }
+  .mes-nav .mes-label-atual{
+    font-family:'Fraunces',serif;
+    font-size:16.5px;
+    font-weight:600;
+    color:var(--accent);
+    background:none;border:none;
+    text-align:center;flex:1;min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    cursor:pointer;
+    padding:2px 0;
+  }
+  .header-botoes{display:flex;gap:8px;flex:none;}
+  .btn-icone{
+    width:36px;height:36px;
+    border-radius:50%;
+    border:1px solid var(--line);
+    background:var(--white);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    color:var(--ink-soft);
+    flex:none;
+  }
+  .btn-icone svg{width:17px;height:17px;}
+
+  .saldo-linha{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+  }
+  .saldo-titulo{
+    font-family:'Fraunces',serif;
+    font-size:15px;
+    color:var(--ink-soft);
+  }
+  .saldo-valor{
+    font-family:'Fraunces',serif;
+    font-size:34px;
+    font-weight:600;
+    font-variant-numeric:tabular-nums;
+  }
+  .saldo-valor.positivo{color:var(--green);}
+  .saldo-valor.negativo{color:var(--red);}
+
+  .subrow{
+    display:flex;
+    gap:16px;
+    margin-top:10px;
+    font-size:13px;
+  }
+  .chip{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    color:var(--ink-soft);
+  }
+  .dot{width:8px;height:8px;border-radius:50%;flex:none;}
+  .dot.p1{background:var(--matheus);}
+  .dot.p2{background:var(--andreia);}
+
+  /* ---------- CONTENT ---------- */
+  main{padding:20px 18px 10px;}
+  .oculto{display:none !important;}
+  .view-conteudo{animation:viewIn .28s ease both;}
+
+  section.card{
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:18px;
+    margin-bottom:16px;
+    transition:background .35s ease,border-color .35s ease;
+    position:relative;
+    animation:cardIn .4s ease both;
+  }
+
+  .card-cabecalho{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .card-titulo{
+    font-family:'Fraunces',serif;
+    font-size:16px;
+    font-weight:600;
+    margin:0 0 4px;
+  }
+  .card-sub{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin:0 0 14px;
+  }
+  .card-reorder{display:flex;flex-direction:column;gap:2px;flex:none;}
+  .card-reorder button{
+    width:24px;height:20px;border:1px solid var(--line);background:var(--paper);
+    color:var(--ink-soft);border-radius:6px;font-size:10px;cursor:pointer;line-height:1;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .card-reorder button:disabled{opacity:.3;}
+
+  .pill-group{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+  .pill{
+    padding:6px 13px;border-radius:20px;border:1px solid var(--line);
+    background:var(--paper);font-size:12px;font-weight:600;color:var(--ink-soft);
+    cursor:pointer;
+  }
+  .pill.ativo{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+  /* salario */
+  .salario-row{
+    display:flex;
+    align-items:center;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:10px 14px;
+  }
+  .salario-row span.prefixo{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    color:var(--ink-soft);
+    margin-right:6px;
+  }
+  .salario-row input{
+    border:none;
+    background:none;
+    font-family:'Fraunces',serif;
+    font-size:20px;
+    font-weight:600;
+    color:var(--ink);
+    width:100%;
+    font-variant-numeric:tabular-nums;
+  }
+  .salario-row input:focus{outline:none;}
+
+  /* nome editável da pessoa */
+  .nome-editavel-row{display:flex;align-items:center;gap:8px;margin-bottom:2px;}
+  .nome-editavel-row input{
+    font-family:'Fraunces',serif;font-size:19px;font-weight:600;color:var(--accent);
+    border:none;background:none;padding:2px 0;flex:1;min-width:0;
+  }
+  .nome-editavel-row input:focus{outline:none;border-bottom:1px dashed var(--ink-soft);}
+  .nome-editavel-row .selo{flex:none;}
+
+  /* linhas de gasto tipo ficha */
+  .ficha{border-top:1px solid var(--line);}
+  .linha-gasto{
+    display:grid;
+    grid-template-columns:1fr auto auto;
+    align-items:center;
+    padding:12px 0;
+    border-bottom:1px dashed var(--line);
+    gap:8px;
+  }
+  .linha-gasto:last-child{border-bottom:none;}
+  .categoria-nome{
+    font-size:14.5px;
+    font-weight:500;
+  }
+  .categoria-desc-input{
+    border:none;
+    background:none;
+    font-size:12px;
+    color:var(--ink-soft);
+    width:100%;
+    padding:2px 0 0;
+    font-family:'IBM Plex Sans',sans-serif;
+  }
+  .categoria-desc-input:focus{outline:none;border-bottom:1px dashed var(--line);}
+  .categoria-desc-input::placeholder{color:#9E947C;}
+
+  .valor-input-wrap{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+  }
+  .valor-input-wrap span{
+    font-size:13px;
+    color:var(--ink-soft);
+    margin-right:3px;
+  }
+  .valor-input{
+    border:none;
+    background:none;
+    text-align:right;
+    font-family:'IBM Plex Sans',sans-serif;
+    font-weight:600;
+    font-size:15px;
+    width:82px;
+    color:var(--ink);
+    font-variant-numeric:tabular-nums;
+  }
+  .valor-input:focus{outline:none;}
+
+  .btn-remover{
+    border:none;
+    background:none;
+    color:var(--ink-soft);
+    font-size:17px;
+    line-height:1;
+    padding:4px 2px;
+    cursor:pointer;
+  }
+  .btn-remover:active{color:var(--red);}
+
+  .total-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    padding-top:14px;
+    margin-top:4px;
+    border-top:2px solid var(--accent);
+  }
+  .total-label{
+    font-family:'Fraunces',serif;
+    font-size:14px;
+    color:var(--ink-soft);
+  }
+  .total-valor{
+    font-family:'Fraunces',serif;
+    font-size:19px;
+    font-weight:600;
+    font-variant-numeric:tabular-nums;
+    color:var(--accent);
+  }
+
+  .btn-add{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    width:100%;
+    margin-top:14px;
+    padding:12px;
+    border-radius:12px;
+    border:1.5px dashed var(--ink-soft);
+    background:none;
+    color:var(--ink);
+    font-family:'IBM Plex Sans',sans-serif;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .btn-add:active{background:var(--paper-deep);}
+
+  /* form de novo item (gasto ou meta) */
+  .form-novo{
+    margin-top:14px;
+    padding:14px;
+    border-radius:12px;
+    background:var(--paper);
+    border:1px solid var(--line);
+    display:none;
+  }
+  .form-novo.aberto{display:block;animation:popIn .22s ease both;}
+  .form-novo label{
+    display:block;
+    font-size:11.5px;
+    color:var(--ink-soft);
+    margin:10px 0 4px;
+  }
+  .form-novo label:first-child{margin-top:0;}
+  .form-novo input{
+    width:100%;
+    border:1px solid var(--line);
+    background:var(--white);
+    border-radius:8px;
+    padding:9px 10px;
+    font-family:'IBM Plex Sans',sans-serif;
+    font-size:14px;
+    color:var(--ink);
+  }
+  .form-novo input:focus{outline:none;border-color:var(--ink-soft);}
+  .form-botoes{
+    display:flex;
+    gap:8px;
+    margin-top:14px;
+  }
+  .form-botoes button{
+    flex:1;
+    padding:10px;
+    border-radius:8px;
+    border:none;
+    font-family:'IBM Plex Sans',sans-serif;
+    font-weight:600;
+    font-size:13.5px;
+    cursor:pointer;
+  }
+  .btn-salvar{background:var(--ink);color:var(--paper);}
+  .btn-cancelar{background:none;color:var(--ink-soft);border:1px solid var(--line) !important;}
+
+  /* barra de progresso resumo */
+  .pessoa-resumo{margin-bottom:18px;}
+  .pessoa-resumo:last-child{margin-bottom:0;}
+  .pessoa-topo{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:8px;
+  }
+  .pessoa-nome{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:15px;
+  }
+  .pessoa-numeros{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    font-variant-numeric:tabular-nums;
+  }
+  .barra-bg{
+    height:10px;
+    border-radius:6px;
+    background:var(--paper-deep);
+    overflow:hidden;
+  }
+  .barra-fill{
+    height:100%;
+    border-radius:6px;
+    transition:width .5s ease;
+  }
+  .barra-fill.p1{background:var(--matheus);}
+  .barra-fill.p2{background:var(--andreia);}
+
+  /* donut */
+  .donut-wrap{
+    display:flex;
+    align-items:center;
+    gap:20px;
+  }
+  .donut{
+    width:128px;height:128px;
+    border-radius:50%;
+    flex:none;
+    position:relative;
+    display:flex;align-items:center;justify-content:center;
+    transition:background .4s ease;
+    animation:popIn .4s ease both;
+  }
+  .donut::before{
+    content:"";
+    position:absolute;
+    width:74px;height:74px;
+    border-radius:50%;
+    background:var(--white);
+  }
+  .donut-centro{
+    position:relative;
+    text-align:center;
+    z-index:1;
+  }
+  .donut-centro .valor{
+    font-family:'Fraunces',serif;
+    font-weight:700;
+    font-size:14.5px;
+    display:block;
+  }
+  .donut-centro .rotulo{
+    font-size:9.5px;
+    color:var(--ink-soft);
+  }
+
+  .lista-top-categorias{flex:1;min-width:0;}
+  .top-cat-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:12.5px;
+    padding:6px 0;
+    gap:8px;
+  }
+  .top-cat-nome{color:var(--ink-soft);display:flex;align-items:center;gap:7px;min-width:0;}
+  .top-cat-nome span.txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .swatch{width:9px;height:9px;border-radius:3px;flex:none;}
+  .top-cat-valor{font-weight:600;font-variant-numeric:tabular-nums;flex:none;}
+  .top-cat-mais{font-size:11.5px;color:var(--ink-soft);padding-top:4px;}
+
+  /* ranking de categorias em barras horizontais (gráfico alternativo) */
+  .rank-cat-row{margin-bottom:10px;}
+  .rank-cat-row:last-child{margin-bottom:0;}
+  .rank-cat-topo{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;}
+  .rank-cat-topo .nome{color:var(--ink-soft);display:flex;align-items:center;gap:6px;min-width:0;}
+  .rank-cat-topo .nome span.txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .rank-cat-topo .valor{font-weight:600;font-variant-numeric:tabular-nums;flex:none;}
+  .rank-cat-bg{height:8px;border-radius:5px;background:var(--paper-deep);overflow:hidden;}
+  .rank-cat-fill{height:100%;border-radius:5px;transition:width .5s ease;}
+
+  /* grafico de barras salario x gasto */
+  .barras-comparativo{
+    display:flex;
+    justify-content:space-around;
+    align-items:flex-end;
+    height:150px;
+    padding-top:10px;
+  }
+  .grupo-barra{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+  }
+  .par-barras{
+    display:flex;
+    align-items:flex-end;
+    gap:5px;
+    height:110px;
+  }
+  .barra-vertical{
+    width:20px;
+    border-radius:5px 5px 0 0;
+    position:relative;
+    min-height:3px;
+    transition:height .5s ease;
+  }
+  .barra-vertical .rotulo-valor{
+    position:absolute;
+    top:-18px;
+    left:50%;
+    transform:translateX(-50%);
+    font-size:9.5px;
+    font-weight:600;
+    color:var(--ink-soft);
+    white-space:nowrap;
+  }
+  .grupo-barra .legenda-grupo{
+    font-family:'Fraunces',serif;
+    font-size:12.5px;
+    font-weight:600;
+  }
+  .legenda-cores{
+    display:flex;
+    justify-content:center;
+    gap:18px;
+    margin-top:12px;
+    font-size:11.5px;
+    color:var(--ink-soft);
+  }
+  .legenda-cores span{display:flex;align-items:center;gap:5px;}
+
+  /* percentual (grafico alternativo do comparativo) */
+  .percentual-linha{margin-bottom:14px;}
+  .percentual-linha:last-child{margin-bottom:0;}
+  .percentual-topo{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;}
+  .percentual-topo .nome{font-family:'Fraunces',serif;font-weight:600;}
+  .percentual-topo .pct{font-weight:600;font-variant-numeric:tabular-nums;}
+  .percentual-bg{height:14px;border-radius:8px;background:var(--paper-deep);overflow:hidden;}
+  .percentual-fill{height:100%;border-radius:8px;transition:width .5s ease;}
+
+  /* ---------- METAS ---------- */
+  .meta-card{margin-bottom:16px;}
+  .meta-card:last-child{margin-bottom:0;}
+  .meta-nome-input{
+    font-family:'Fraunces',serif;font-size:17px;font-weight:600;color:var(--ink);
+    border:none;background:none;width:100%;padding:2px 0;margin-bottom:10px;
+  }
+  .meta-nome-input:focus{outline:none;border-bottom:1px dashed var(--ink-soft);}
+  .meta-campo-row{display:flex;gap:10px;margin-bottom:12px;}
+  .meta-campo{flex:1;}
+  .meta-campo label{display:block;font-size:11px;color:var(--ink-soft);margin-bottom:4px;}
+  .meta-campo .caixa{
+    display:flex;align-items:center;background:var(--paper);border:1px solid var(--line);
+    border-radius:10px;padding:8px 10px;
+  }
+  .meta-campo .caixa span{font-size:12px;color:var(--ink-soft);margin-right:4px;}
+  .meta-campo input{
+    border:none;background:none;font-weight:600;font-size:14.5px;color:var(--ink);
+    width:100%;font-variant-numeric:tabular-nums;
+  }
+  .meta-campo input:focus{outline:none;}
+  .meta-progress-bg{height:14px;border-radius:8px;background:var(--paper-deep);overflow:hidden;margin-top:2px;}
+  .meta-progress-fill{height:100%;border-radius:8px;background:var(--accent);transition:width .6s ease;}
+  .meta-numeros{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-soft);margin-top:6px;}
+  .meta-numeros b{color:var(--ink);font-variant-numeric:tabular-nums;}
+  .meta-historico-titulo{font-size:11.5px;color:var(--ink-soft);margin:16px 0 8px;}
+  .meta-mini-barras{display:flex;align-items:flex-end;gap:6px;height:60px;overflow-x:auto;padding-bottom:2px;}
+  .meta-mini-grupo{display:flex;flex-direction:column;align-items:center;gap:4px;flex:none;width:30px;}
+  .meta-mini-barra{width:14px;border-radius:3px 3px 0 0;min-height:2px;transition:height .5s ease;}
+  .meta-mini-mes{font-size:8px;color:var(--ink-soft);white-space:nowrap;}
+  .meta-remover-linha{display:flex;justify-content:flex-end;margin-top:10px;}
+  .meta-remover-linha button{border:none;background:none;color:var(--ink-soft);font-size:12px;cursor:pointer;}
+  .meta-remover-linha button:active{color:var(--red);}
+  .meta-vazio{text-align:center;padding:20px 10px;color:var(--ink-soft);font-size:13px;}
+  .meta-vazio button{
+    margin-top:12px;display:inline-block;padding:10px 18px;border-radius:20px;border:none;
+    background:var(--accent);color:#fff;font-weight:600;font-size:13px;cursor:pointer;
+  }
+
+  /* ---------- HISTORICO ---------- */
+  .hist-destaque{
+    display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;
+    background:var(--red-soft);margin-bottom:14px;
+  }
+  .hist-destaque .icone{font-size:20px;flex:none;}
+  .hist-destaque .texto{font-size:12.5px;color:var(--ink-soft);}
+  .hist-destaque .texto b{display:block;font-family:'Fraunces',serif;font-size:15px;color:var(--red);font-weight:700;}
+  .hist-barras{display:flex;align-items:flex-end;gap:10px;height:130px;overflow-x:auto;padding:10px 2px 0;}
+  .hist-grupo{display:flex;flex-direction:column;align-items:center;gap:6px;flex:none;width:34px;}
+  .hist-barra{width:20px;border-radius:5px 5px 0 0;min-height:3px;transition:height .5s ease;position:relative;background:var(--red);}
+  .hist-barra.max{background:var(--gold);}
+  .hist-mes-rotulo{font-size:9px;color:var(--ink-soft);white-space:nowrap;}
+  .hist-linha{
+    display:flex;justify-content:space-between;align-items:center;padding:11px 0;
+    border-bottom:1px dashed var(--line);font-size:13px;cursor:pointer;
+  }
+  .hist-linha:last-child{border-bottom:none;}
+  .hist-linha.destaque{color:var(--red);font-weight:700;}
+  .hist-linha .mes{font-family:'Fraunces',serif;font-weight:600;}
+  .hist-linha .valores{text-align:right;font-size:11.5px;color:var(--ink-soft);}
+  .hist-linha .valores b{display:block;font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums;}
+  .hist-linha.destaque .valores b{color:var(--red);}
+
+  /* ---------- TAB BAR ---------- */
+  nav.tabbar{
+    position:fixed;
+    left:50%;
+    transform:translateX(-50%);
+    bottom:16px;
+    width:calc(100% - 36px);
+    max-width:424px;
+    background:var(--bar-bg);
+    border-radius:18px;
+    display:flex;
+    padding:6px;
+    box-shadow:0 8px 24px rgba(0,0,0,.28);
+    transition:background .35s ease;
+  }
+  nav.tabbar button{
+    flex:1;
+    border:none;
+    background:none;
+    color:var(--bar-text);
+    font-family:'IBM Plex Sans',sans-serif;
+    font-size:10.5px;
+    font-weight:600;
+    padding:9px 2px 8px;
+    border-radius:13px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:3px;
+    cursor:pointer;
+    min-width:0;
+  }
+  nav.tabbar button .rotulo-tab{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}
+  nav.tabbar button svg{width:17px;height:17px;opacity:.75;flex:none;}
+  nav.tabbar button.ativo{
+    background:var(--paper);
+  }
+  nav.tabbar button.ativo svg{opacity:1;}
+  nav.tabbar button[data-tab="p1"].ativo{color:var(--matheus);}
+  nav.tabbar button[data-tab="p2"].ativo{color:var(--andreia);}
+  nav.tabbar button[data-tab="resumo"].ativo{color:var(--ink);}
+  nav.tabbar button[data-tab="metas"].ativo{color:var(--gold);}
+  nav.tabbar button[data-tab="historico"].ativo{color:var(--ink);}
+
+  .selo{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:22px;height:22px;
+    border-radius:50%;
+    font-family:'Fraunces',serif;
+    font-weight:700;
+    font-size:11px;
+    color:#fff;
+  }
+  .selo.p1{background:var(--matheus);}
+  .selo.p2{background:var(--andreia);}
+  .selo.meta{background:var(--gold);}
+
+  #status{
+    text-align:center;
+    font-size:12px;
+    color:var(--ink-soft);
+    padding:40px 0;
+  }
+
+  /* ---------- overlays / modais ---------- */
+  .confirm-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(20,17,12,.45);
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    z-index:50;
+    animation:fadeOverlay .2s ease;
+  }
+  @keyframes fadeOverlay{from{opacity:0;}to{opacity:1;}}
+  .confirm-box{
+    width:100%;
+    max-width:460px;
+    background:var(--white);
+    border-radius:18px 18px 0 0;
+    padding:22px;
+    padding-bottom:36px;
+    animation:subirBox .25s ease;
+  }
+  @keyframes subirBox{from{transform:translateY(30px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+  .confirm-box p{
+    font-family:'Fraunces',serif;
+    font-size:15.5px;
+    margin:0 0 16px;
+  }
+  .confirm-box h3{font-family:'Fraunces',serif;font-size:17px;margin:0 0 16px;}
+  .confirm-box label{display:block;font-size:11.5px;color:var(--ink-soft);margin:12px 0 4px;}
+  .confirm-box label:first-of-type{margin-top:0;}
+  .confirm-box input{
+    width:100%;border:1px solid var(--line);background:var(--paper);border-radius:8px;
+    padding:10px;font-family:'IBM Plex Sans',sans-serif;font-size:14.5px;color:var(--ink);
+  }
+  .confirm-box input:focus{outline:none;border-color:var(--ink-soft);}
+  .confirm-botoes{display:flex;gap:10px;margin-top:18px;}
+  .confirm-botoes button{
+    flex:1;
+    padding:12px;
+    border-radius:10px;
+    border:none;
+    font-weight:600;
+    font-size:14px;
+    cursor:pointer;
+    font-family:'IBM Plex Sans',sans-serif;
+  }
+  #confirmCancelar{background:var(--paper-deep);color:var(--ink);}
+  #confirmRemover{background:var(--red);color:#fff;}
+  .lista-meses-modal{max-height:280px;overflow-y:auto;margin-top:4px;}
+  .lista-meses-modal button{
+    width:100%;text-align:left;padding:12px 10px;border:none;background:none;
+    border-bottom:1px dashed var(--line);font-family:'IBM Plex Sans',sans-serif;
+    font-size:14.5px;color:var(--ink);cursor:pointer;display:flex;justify-content:space-between;
+  }
+  .lista-meses-modal button.mes-ativo{color:var(--accent);font-weight:700;}
+  .lista-meses-modal button:last-child{border-bottom:none;}
+
+  /* categoria: nome + selos */
+  .categoria-nome-linha{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .badge-fixo{font-size:11px;}
+  .badge-parcela{font-size:10px;background:var(--paper-deep);color:var(--ink-soft);padding:2px 7px;border-radius:8px;}
+  .badge-parcela.ultima{background:var(--red-soft);color:var(--red);font-weight:600;}
+
+  /* mais opcoes (limite / parcela / recorrente) */
+  .link-mais-opcoes{border:none;background:none;color:var(--ink-soft);font-size:11px;text-decoration:underline;padding:5px 0 0;cursor:pointer;}
+  .opcoes-extra{margin-top:8px;padding:10px;border-radius:10px;background:var(--paper);border:1px solid var(--line);}
+  .opcoes-extra-campo{margin-bottom:8px;}
+  .opcoes-extra-campo label{display:block;font-size:10.5px;color:var(--ink-soft);margin-bottom:3px;}
+  .opcoes-extra-campo input{width:100%;border:1px solid var(--line);background:var(--white);border-radius:7px;padding:7px 9px;font-size:13px;color:var(--ink);font-family:'IBM Plex Sans',sans-serif;}
+  .opcoes-extra-campo input:focus{outline:none;border-color:var(--ink-soft);}
+  .opcoes-extra-check{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-soft);}
+  .opcoes-extra-check input{width:auto;}
+  .aviso-limite{font-size:11px;color:var(--red);margin-top:4px;font-weight:600;}
+  .linha-gasto.acima-limite{border-left:3px solid var(--red);padding-left:8px;}
+
+  /* compartilhar resumo */
+  .acao-compartilhar{order:99;}
+  .btn-compartilhar{
+    display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+    padding:13px;border-radius:12px;border:none;background:var(--ink);color:var(--paper);
+    font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;
+  }
+  #resumoTextoArea{
+    width:100%;min-height:160px;border:1px solid var(--line);background:var(--paper);
+    border-radius:10px;padding:12px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;
+    color:var(--ink);resize:none;
+  }
+  #resumoTextoArea:focus{outline:none;}
+
+  /* ---------- v3: personalização, menu e dados ---------- */
+  body:not(.dark).paleta-menta{--paper:#F0F7F1;--paper-deep:#E1EFE3;--accent:#58856A;--line:#CFE0D2;--bar-bg:#284637;}
+  body:not(.dark).paleta-azul{--paper:#F1F5FB;--paper-deep:#E3ECF8;--accent:#5B789E;--line:#D2DEED;--bar-bg:#304760;}
+  body:not(.dark).paleta-rosa{--paper:#FFF2F5;--paper-deep:#F8E3EA;--accent:#A86F82;--line:#EBD0D9;--bar-bg:#573541;}
+  body:not(.dark).paleta-amarela{--paper:#FFF8E9;--paper-deep:#F8EDCB;--accent:#A18448;--line:#EBDDB5;--bar-bg:#5A4A2A;}
+  .menu-toggle{font-size:20px;line-height:1;border:none;background:none;color:var(--ink);padding:6px 8px;cursor:pointer;}
+  .drawer-backdrop{position:fixed;inset:0;background:rgba(20,17,12,.35);z-index:60;opacity:0;pointer-events:none;transition:opacity .2s ease;}
+  .drawer-backdrop.aberto{opacity:1;pointer-events:auto;}
+  .drawer{position:fixed;z-index:61;top:0;bottom:0;left:0;width:min(320px,88vw);background:var(--white);transform:translateX(-105%);transition:transform .25s cubic-bezier(.23,1,.32,1);padding:22px 18px;box-shadow:12px 0 32px rgba(0,0,0,.2);overflow-y:auto;}
+  .drawer.aberto{transform:translateX(0);}
+  .drawer-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+  .drawer-head h2{font-family:'Fraunces',serif;font-size:21px;margin:0;}
+  .drawer-close{border:none;background:var(--paper);border-radius:50%;width:34px;height:34px;color:var(--ink);font-size:20px;cursor:pointer;}
+  .drawer-section{border-top:1px solid var(--line);padding:16px 0;}
+  .drawer-section h3{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);margin:0 0 10px;}
+  .drawer-action,.drawer-nav{width:100%;display:flex;align-items:center;gap:11px;border:none;background:none;color:var(--ink);padding:12px 8px;border-radius:10px;text-align:left;font-size:14px;cursor:pointer;}
+  .drawer-action:hover,.drawer-nav:hover{background:var(--paper);}
+  .drawer-action .icone,.drawer-nav .icone{font-size:19px;width:24px;text-align:center;}
+  .palette-row{display:flex;gap:9px;flex-wrap:wrap;}
+  .palette-dot{width:34px;height:34px;border-radius:50%;border:3px solid var(--white);box-shadow:0 0 0 1px var(--line);cursor:pointer;}
+  .palette-dot.ativa{box-shadow:0 0 0 2px var(--accent);}
+  .quick-backup{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--green-soft);border:1px solid var(--line);border-radius:14px;padding:13px 14px;margin-bottom:16px;}
+  .quick-backup strong{display:block;font-family:'Fraunces',serif;font-size:15px;}
+  .quick-backup small{color:var(--ink-soft);font-size:11px;}
+  .quick-backup button{border:none;border-radius:9px;background:var(--accent);color:#fff;padding:9px 11px;font-weight:700;cursor:pointer;}
+  .renda-extra-row{margin-top:10px;padding:10px 14px;border-radius:12px;background:var(--green-soft);border:1px solid var(--line);}
+  .renda-extra-row label{display:block;color:var(--ink-soft);font-size:11px;margin-bottom:4px;}
+  .renda-extra-row input{width:100%;border:none;background:transparent;color:var(--ink);font-family:'Fraunces',serif;font-size:19px;font-weight:600;}
+  .renda-extra-row input:focus{outline:none;}
+  .mini-info{font-size:12px;color:var(--ink-soft);line-height:1.45;}
+  .backup-log{margin-top:16px;border-top:1px solid var(--line);padding-top:12px;}
+  .backup-log h4{margin:0 0 8px;font-family:'Fraunces',serif;font-size:14px;}
+  .backup-log-item{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:11px;color:var(--ink-soft);}
+  .backup-log-item strong{color:var(--ink);font-size:12px;}
+  .categoria-icone{width:24px;height:24px;border-radius:8px;background:var(--paper-deep);display:inline-flex;align-items:center;justify-content:center;font-size:15px;flex:none;}
+  .badge-pagamento{font-size:10.5px;margin-left:1px;display:inline-flex;align-items:center;gap:3px;background:var(--paper-deep);color:var(--ink-soft);padding:2px 7px 2px 5px;border-radius:8px;font-weight:600;}
+  .badge-pagamento .emoji{font-size:12px;}
+  .badge-pagamento.pix{background:#DCF3EE;color:#0d7d68;}
+  .badge-pagamento.debito{background:#E3ECF8;color:#3f5b7d;}
+  .badge-pagamento.credito{background:#F5E6EC;color:#9c4f6b;}
+  body.dark .badge-pagamento.pix{background:#0d7d6833;color:#5fd9c2;}
+  body.dark .badge-pagamento.debito{background:#3f5b7d33;color:#9db8de;}
+  body.dark .badge-pagamento.credito{background:#9c4f6b33;color:#e9a8c1;}
+  .select-pagamento{width:100%;border:1px solid var(--line);background:var(--white);border-radius:8px;padding:10px;color:var(--ink);font:inherit;}
+  .select-pagamento + .mini-info{display:block;margin-top:5px;}
+  .pagamento-grupo{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:2px 0 3px;}
+  .pagamento-opcao{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:11px 3px;border:1.5px solid var(--line);background:var(--white);border-radius:13px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;font-size:10.5px;color:var(--ink-soft);transition:border-color .15s ease,background .15s ease,transform .1s ease;text-align:center;line-height:1.15;}
+  .pagamento-opcao .pagamento-emoji{font-size:19px;}
+  .pagamento-opcao:active{transform:scale(.96);}
+  .pagamento-opcao:hover{border-color:var(--accent);}
+  .pagamento-opcao.ativa{border-color:var(--accent);background:var(--paper-deep);color:var(--ink);font-weight:700;box-shadow:0 0 0 1px var(--accent) inset;}
+  .campo-parcelas{margin-top:4px;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:11px 12px;}
+  .campo-parcelas label{display:block;font-size:11.5px;color:var(--ink-soft);margin-bottom:5px;}
+  .campo-parcelas input{width:100%;border:1px solid var(--line);background:var(--white);border-radius:8px;padding:10px;color:var(--ink);font:inherit;}
+  .campo-parcelas .mini-info{margin-top:6px;}
+  .install-share{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:8px;font-size:12px;color:var(--ink-soft);}
+  .sync-status{display:flex;align-items:center;gap:10px;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:16px;}
+  .sync-status .ponto{width:9px;height:9px;border-radius:50%;background:var(--ink-soft);flex:none;}
+  .sync-status.conectado .ponto{background:var(--green);}
+  .sync-status strong{display:block;font-size:13.5px;}
+  .sync-status small{color:var(--ink-soft);font-size:11.5px;}
+  .sync-secao{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);}
+  .sync-secao h4{margin:0 0 6px;font-family:'Fraunces',serif;font-size:14.5px;}
+  .sync-secao p{margin:0 0 10px;font-size:12.5px;color:var(--ink-soft);line-height:1.5;}
+  .codigo-grande{font-family:'IBM Plex Sans',sans-serif;font-size:26px;font-weight:700;letter-spacing:.14em;text-align:center;background:var(--paper);border:1.5px dashed var(--line);border-radius:12px;padding:14px;margin:6px 0 10px;color:var(--ink);}
+  .sync-entrada-row{display:flex;gap:8px;}
+  .sync-entrada-row input{flex:1;border:1px solid var(--line);background:var(--white);border-radius:8px;padding:10px;font:inherit;color:var(--ink);letter-spacing:.08em;text-transform:uppercase;}
+  .sync-msg{font-size:12px;margin-top:8px;min-height:14px;}
+  .sync-msg.erro{color:var(--red);}
+  .sync-msg.ok{color:var(--green);}
+  .btn-desconectar{border:none;background:none;color:var(--red);font-size:12.5px;text-decoration:underline;cursor:pointer;padding:0;}
+  .atividade-item{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px dashed var(--line);font-size:13px;color:var(--ink);}
+  .atividade-item:last-child{border-bottom:none;}
+  .atividade-quando{font-size:11px;color:var(--ink-soft);margin-top:2px;}
+  .atividade-valor{font-size:13px;font-weight:700;white-space:nowrap;}
+  @media (min-width:700px){#app{box-shadow:0 0 34px rgba(0,0,0,.12);}.drawer{left:calc(50% - 230px);}}
+
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <div class="drawer-backdrop" id="drawerBackdrop"></div>
+  <aside class="drawer" id="drawer">
+    <div class="drawer-head"><h2>Organizar app</h2><button class="drawer-close" id="fecharDrawer" aria-label="Fechar menu">×</button></div>
+    <div class="drawer-section">
+      <h3>Navegação</h3>
+      <button class="drawer-nav" data-drawer-tab="resumo"><span class="icone">▥</span>Resumo geral</button>
+      <button class="drawer-nav" data-drawer-tab="p1"><span class="icone">👤</span><span data-drawer-name="p1">Pessoa 1</span></button>
+      <button class="drawer-nav" data-drawer-tab="p2"><span class="icone">👤</span><span data-drawer-name="p2">Pessoa 2</span></button>
+      <button class="drawer-nav" data-drawer-tab="metas"><span class="icone">🎯</span>Metas e objetivos</button>
+      <button class="drawer-nav" data-drawer-tab="historico"><span class="icone">▦</span>Histórico anual</button>
+    </div>
+    <div class="drawer-section">
+      <h3>Dados</h3>
+      <button class="drawer-action" id="drawerBackup"><span class="icone">☁</span>Backup e importar/exportar</button>
+      <button class="drawer-action" id="drawerSync"><span class="icone">👫</span>Conectar com parceiro(a)</button>
+      <button class="drawer-action" id="drawerAtividades"><span class="icone">🕘</span>Atividades recentes</button>
+      <button class="drawer-action" id="drawerShare"><span class="icone">↗</span>Compartilhar o app</button>
+    </div>
+    <div class="drawer-section">
+      <h3>Fundo</h3>
+      <div class="palette-row">
+        <button class="palette-dot" data-paleta="original" style="background:#F5F5F3" aria-label="Original"></button>
+        <button class="palette-dot" data-paleta="menta" style="background:#DCEFE0" aria-label="Verde menta"></button>
+        <button class="palette-dot" data-paleta="azul" style="background:#DCE7F5" aria-label="Azul claro"></button>
+        <button class="palette-dot" data-paleta="rosa" style="background:#F5DDE5" aria-label="Rosa claro"></button>
+        <button class="palette-dot" data-paleta="amarela" style="background:#F6E9B9" aria-label="Amarelo claro"></button>
+      </div>
+    </div>
+  </aside>
+
+  <header>
+    <div class="header-topo">
+      <div class="mes-nav"><button class="menu-toggle" id="abrirDrawer" title="Abrir menu">☰</button>
+        <button class="seta" id="mesAnterior" title="Mês anterior">‹</button>
+        <button class="mes-label-atual" id="mesAtualLabel" title="Escolher mês">Agosto 2026</button>
+        <button class="seta" id="mesProximo" title="Próximo mês">›</button>
+      </div>
+      <div class="header-botoes">
+        <button class="btn-icone" id="btnNomes" title="Editar nomes">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        </button>
+        <button class="btn-icone" id="btnTema" title="Alternar tema">
+          <svg id="iconeTema" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+        </button>
+      </div>
+    </div>
+    <div class="saldo-linha">
+      <span class="saldo-titulo">Sobra combinada</span>
+      <span id="saldoGeral" class="saldo-valor">R$ 0,00</span>
+    </div>
+    <div class="subrow">
+      <div class="chip"><span class="dot p1"></span><span id="chipP1">R$ 0,00</span></div>
+      <div class="chip"><span class="dot p2"></span><span id="chipP2">R$ 0,00</span></div>
+    </div>
+  </header>
+
+  <main>
+    <div id="status">Carregando seus dados...</div>
+
+    <!-- ===================== RESUMO ===================== -->
+    <div id="viewResumo" class="oculto view-conteudo" style="display:flex;flex-direction:column;">
+
+      <section class="card" data-card-id="renda">
+        <div class="card-cabecalho">
+          <div>
+            <p class="card-titulo">Saídas do mês</p>
+            <p class="card-sub">Gastos e valores separados para os objetivos.</p>
+          </div>
+          <div class="card-reorder" data-reorder="renda">
+            <button data-mover="cima">▲</button>
+            <button data-mover="baixo">▼</button>
+          </div>
+        </div>
+
+        <div class="pessoa-resumo">
+          <div class="pessoa-topo">
+            <span class="pessoa-nome"><span class="selo p1" id="seloResumoP1">1</span><span id="resumoNomeP1">Pessoa 1</span></span>
+            <span id="resumoP1Numeros" class="pessoa-numeros"></span>
+          </div>
+          <div class="barra-bg"><div id="barraP1" class="barra-fill p1" style="width:0%"></div></div>
+        </div>
+
+        <div class="pessoa-resumo">
+          <div class="pessoa-topo">
+            <span class="pessoa-nome"><span class="selo p2" id="seloResumoP2">2</span><span id="resumoNomeP2">Pessoa 2</span></span>
+            <span id="resumoP2Numeros" class="pessoa-numeros"></span>
+          </div>
+          <div class="barra-bg"><div id="barraP2" class="barra-fill p2" style="width:0%"></div></div>
+        </div>
+      </section>
+
+      <section class="card" data-card-id="entradas">
+        <div class="card-cabecalho"><div><p class="card-titulo">Entradas adicionais</p><p class="card-sub">Renda extra fica separada do salário e os aportes aparecem nos objetivos.</p></div><div class="card-reorder" data-reorder="entradas"><button data-mover="cima">▲</button><button data-mover="baixo">▼</button></div></div>
+        <div id="resumoEntradas" class="mini-info"></div>
+        <div id="resumoInvestimentos" class="mini-info" style="margin-top:8px;"></div>
+        <div id="resumoEquilibrio" class="mini-info" style="margin-top:8px;"></div>
+      </section>
+
+      <section class="card" data-card-id="comparativo">
+        <div class="card-cabecalho">
+          <div>
+            <p class="card-titulo">Renda x gasto x objetivo</p>
+            <p class="card-sub">Veja a renda, os gastos e o que foi separado para os objetivos.</p>
+          </div>
+          <div class="card-reorder" data-reorder="comparativo">
+            <button data-mover="cima">▲</button>
+            <button data-mover="baixo">▼</button>
+          </div>
+        </div>
+        <div class="pill-group">
+          <button class="pill" data-comparativo-tipo="barras">Barras</button>
+          <button class="pill" data-comparativo-tipo="percentual">% do salário</button>
+        </div>
+        <div id="areaComparativo"></div>
+      </section>
+
+      <section class="card" data-card-id="categorias">
+        <div class="card-cabecalho">
+          <div>
+            <p class="card-titulo">Maiores categorias</p>
+            <p class="card-sub">Somando os gastos dos dois.</p>
+          </div>
+          <div class="card-reorder" data-reorder="categorias">
+            <button data-mover="cima">▲</button>
+            <button data-mover="baixo">▼</button>
+          </div>
+        </div>
+        <div class="pill-group">
+          <button class="pill" data-categorias-tipo="rosca">Distribuição</button>
+          <button class="pill" data-categorias-tipo="barras">Ranking</button>
+        </div>
+        <div id="areaCategorias"></div>
+      </section>
+
+      <section class="card" data-card-id="metas">
+        <div class="card-cabecalho">
+          <div>
+            <p class="card-titulo">Meus objetivos</p>
+            <p class="card-sub">O quanto falta pra cada meta.</p>
+          </div>
+          <div class="card-reorder" data-reorder="metas">
+            <button data-mover="cima">▲</button>
+            <button data-mover="baixo">▼</button>
+          </div>
+        </div>
+        <div id="areaMetasResumo"></div>
+      </section>
+
+      <div class="acao-compartilhar">
+        <button class="btn-compartilhar" id="btnCompartilharResumo">🔗 Compartilhar resumo do mês</button>
+      </div>
+
+    </div>
+
+    <!-- ===================== PESSOA ===================== -->
+    <div id="viewP1" class="oculto view-conteudo"></div>
+    <div id="viewP2" class="oculto view-conteudo"></div>
+
+    <!-- ===================== METAS ===================== -->
+    <div id="viewMetas" class="oculto view-conteudo">
+      <section class="card">
+        <p class="card-titulo">Objetivos</p>
+        <p class="card-sub">Informe o que já está guardado e acrescente o investimento de cada mês.</p>
+        <div id="metasLista"></div>
+        <button class="btn-add" id="btnAbrirNovaMeta">+ Novo objetivo</button>
+        <div class="form-novo" id="formNovaMeta">
+          <label>Nome do objetivo</label>
+          <input type="text" id="novaMetaNome" placeholder="Ex: Geladeira, Casa própria...">
+          <label>Valor total do objetivo</label>
+          <input type="number" inputmode="decimal" id="novaMetaValor" placeholder="0,00">
+          <div class="form-botoes">
+            <button class="btn-cancelar" id="cancelarNovaMeta">Cancelar</button>
+            <button class="btn-salvar" id="salvarNovaMeta">Criar objetivo</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ===================== HISTORICO ===================== -->
+    <div id="viewHistorico" class="oculto view-conteudo">
+      <section class="card">
+        <p class="card-titulo">Histórico de meses</p>
+        <p class="card-sub">Veja onde o dinheiro foi embora mês a mês.</p>
+        <div class="pill-group">
+          <button class="pill" data-historico-tipo="gastos">Total gasto</button>
+          <button class="pill" data-historico-tipo="saldo">Evolução do saldo</button>
+        </div>
+        <div id="histDestaque"></div>
+        <div id="histBarras" class="hist-barras"></div>
+      </section>
+      <section class="card">
+        <p class="card-titulo">Todos os meses</p>
+        <div id="histLista"></div>
+      </section>
+    </div>
+
+  </main>
+
+  <nav class="tabbar">
+    <button data-tab="resumo" class="ativo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19V10M12 19V4M20 19v-7"/></svg>
+      <span class="rotulo-tab">Resumo</span>
+    </button>
+    <button data-tab="p1">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.5-6 8-6s8 2 8 6"/></svg>
+      <span class="rotulo-tab" data-rotulo-p1>Pessoa 1</span>
+    </button>
+    <button data-tab="p2">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.5-6 8-6s8 2 8 6"/></svg>
+      <span class="rotulo-tab" data-rotulo-p2>Pessoa 2</span>
+    </button>
+    <button data-tab="metas">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>
+      <span class="rotulo-tab">Metas</span>
+    </button>
+    <button data-tab="historico">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
+      <span class="rotulo-tab">Ano</span>
+    </button>
+  </nav>
+
+</div>
+
+<div class="confirm-overlay oculto" id="confirmOverlay">
+  <div class="confirm-box">
+    <p id="confirmMsg">Remover esse item?</p>
+    <div class="confirm-botoes">
+      <button id="confirmCancelar">Cancelar</button>
+      <button id="confirmRemover">Remover</button>
+    </div>
+  </div>
+</div>
+
+<div class="confirm-overlay oculto" id="modalNomes">
+  <div class="confirm-box">
+    <h3>Editar nomes</h3>
+    <label>Nome da pessoa 1</label>
+    <input type="text" id="inputNomeP1">
+    <label>Nome da pessoa 2</label>
+    <input type="text" id="inputNomeP2">
+    <div class="confirm-botoes">
+      <button id="cancelarNomes">Cancelar</button>
+      <button id="salvarNomes" style="background:var(--ink);color:var(--paper);">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="confirm-overlay oculto" id="modalMeses">
+  <div class="confirm-box">
+    <h3>Escolher mês</h3>
+    <div class="lista-meses-modal" id="listaMesesModal"></div>
+    <div class="confirm-botoes">
+      <button id="fecharModalMeses">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="confirm-overlay oculto" id="modalBackup">
+  <div class="confirm-box">
+    <h3>Backup dos dados</h3>
+    <p style="font-size:13px;color:var(--ink-soft);margin:0 0 16px;">Exporte tudo em um arquivo JSON para salvar no Drive, WhatsApp, e-mail ou outro lugar. O registro abaixo mostra quando e onde foi feito.</p>
+    <div class="form-botoes" style="margin-top:0;">
+      <button class="btn-cancelar" id="btnBaixarBackup">Baixar backup</button>
+      <button class="btn-salvar" id="btnRestaurarBackup">Restaurar arquivo</button>
+    </div>
+    <input type="file" id="inputImportar" accept="application/json" class="oculto">
+    <div id="backupHistorico" class="backup-log"></div>
+    <div class="confirm-botoes"><button id="fecharModalBackup" style="flex:1;">Fechar</button></div>
+  </div>
+</div>
+
+<div class="confirm-overlay oculto" id="modalCompartilhar">
+  <div class="confirm-box">
+    <h3>Resumo do mês</h3>
+    <textarea id="resumoTextoArea" readonly></textarea>
+    <div class="form-botoes">
+      <button class="btn-cancelar" id="btnCopiarResumo">Copiar texto</button>
+      <button class="btn-salvar oculto" id="btnCompartilharNativo">Compartilhar</button>
+    </div>
+    <div class="confirm-botoes">
+      <button id="fecharModalCompartilhar" style="flex:1;">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="confirm-overlay oculto" id="modalSync">
+  <div class="confirm-box">
+    <h3>Conectar com parceiro(a)</h3>
+    <div class="sync-status" id="syncStatusBox">
+      <span class="ponto"></span>
+      <div><strong id="syncStatusTitulo">Usando só neste aparelho</strong><small id="syncStatusSub">Seus dados ficam só aqui, sem sincronizar.</small></div>
+    </div>
+
+    <div id="syncSemConexao">
+      <div class="sync-secao">
+        <h4>Criar um código</h4>
+        <p>Gere um código e envie pro seu par. Assim que ele entrar com esse código, os gastos de vocês passam a aparecer nos dois aparelhos, em tempo real.</p>
+        <button class="btn-salvar" style="width:100%;" id="btnCriarCodigo">Gerar código</button>
+      </div>
+      <div class="sync-secao">
+        <h4>Já tenho um código</h4>
+        <p>Digite o código que seu par te enviou pra entrar na conta compartilhada dele(a).</p>
+        <div class="sync-entrada-row">
+          <input type="text" id="inputCodigoSync" maxlength="6" placeholder="ABC123">
+          <button class="btn-salvar" id="btnEntrarCodigo">Entrar</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="syncComConexao" class="oculto">
+      <div class="sync-secao">
+        <h4>Código da dupla</h4>
+        <p>Compartilhe esse código com quem ainda não entrou.</p>
+        <div class="codigo-grande" id="syncCodigoAtual">------</div>
+      </div>
+      <div class="sync-secao">
+        <button class="btn-desconectar" id="btnDesconectarSync">Parar de sincronizar e usar só neste aparelho</button>
+      </div>
+    </div>
+
+    <div class="sync-msg" id="syncMsg"></div>
+    <div class="confirm-botoes"><button id="fecharModalSync" style="flex:1;">Fechar</button></div>
+  </div>
+</div>
+
+<div class="confirm-overlay oculto" id="modalAtividades">
+  <div class="confirm-box">
+    <h3>Atividades recentes</h3>
+    <p style="font-size:13px;color:var(--ink-soft);margin:0 0 10px;">O que cada um de vocês adicionou ou removeu.</p>
+    <div id="listaAtividades" style="max-height:50vh;overflow-y:auto;"></div>
+    <div class="confirm-botoes"><button id="fecharModalAtividades" style="flex:1;">Fechar</button></div>
+  </div>
+</div>
+
+
+<script>
+(function(){
+
+  const CATEGORIAS_P1 = [];
+  const CATEGORIAS_P2 = [];
+
+  const PALETA_P1 = ['#1B3A6B','#2C5490','#3E71B5','#6E97CE','#A9C2E4','#153058'];
+  const PALETA_P2 = ['#A32A63','#C13E80','#D765A0','#E594BE','#F0BBD6','#7E1F4C'];
+
+  const MESES_NOMES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+  const MESES_CURTO = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+
+  const ICONE_SOL = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>';
+  const ICONE_LUA = '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/>';
+
+  function chaveMes(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"); }
+  function rotuloMes(chave){ const [a,m]=chave.split("-").map(Number); return MESES_NOMES[m-1]+" "+a; }
+  function rotuloMesCurto(chave){ const [a,m]=chave.split("-").map(Number); return MESES_CURTO[m-1]+"/"+String(a).slice(2); }
+  function deslocarMes(chave, delta){ const [a,m]=chave.split("-").map(Number); const d=new Date(a, (m-1)+delta, 1); return chaveMes(d); }
+
+  function dadosMesPadrao(){
+    return {
+      p1: { salario:0, rendaExtra:0, investimentoObjetivo:0, gastos: CATEGORIAS_P1.map(c => ({ categoria:c, descricao:"", valor:0, limite:0, parcela:"", fixo:false, pagamento:"" })) },
+      p2: { salario:0, rendaExtra:0, investimentoObjetivo:0, gastos: CATEGORIAS_P2.map(c => ({ categoria:c, descricao:"", valor:0, limite:0, parcela:"", fixo:false, pagamento:"" })) }
+    };
+  }
+
+  function estadoPadrao(){
+    const mesInicial = chaveMes(new Date());
+    const meses = {};
+    meses[mesInicial] = dadosMesPadrao();
+    return {
+      versao: 2,
+      nomes: { p1:"Pessoa 1", p2:"Pessoa 2" },
+      tema: "claro",
+      mesAtual: mesInicial,
+      meses: meses,
+      metas: [],
+      layoutResumo: ["renda","entradas","comparativo","categorias","metas"],
+      paleta: "original",
+      historicoBackup: [],
+      atividades: [],
+      graficoComparativoTipo: "barras",
+      graficoCategoriasTipo: "rosca",
+      graficoHistoricoTipo: "gastos"
+    };
+  }
+
+  let estado = null;
+  let salvarTimeout = null;
+  let acaoConfirmar = null;
+  let abaAtiva = "resumo";
+
+  // ---------- sincronização com parceiro(a) (Firebase Firestore) ----------
+  const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyAAul13jj3Gb8wZnw9ZY_9RAohjCR57IKE",
+    authDomain: "controle-gastos-casa.firebaseapp.com",
+    projectId: "controle-gastos-casa",
+    storageBucket: "controle-gastos-casa.firebasestorage.app",
+    messagingSenderId: "736617663077",
+    appId: "1:736617663077:web:69b0b35904eafc463cd48c"
+  };
+  let dbSync = null;
+  try{
+    if(window.firebase){
+      firebase.initializeApp(FIREBASE_CONFIG);
+      dbSync = firebase.firestore();
+    }
+  }catch(e){ dbSync = null; }
+
+  let grupoId = localStorage.getItem('controle-de-gastos-grupo') || null;
+  let unsubscribeSync = null;
+  let estadoRemotoPendente = null;
+  let aplicarPendenteTimeout = null;
+  let ultimaDigitacaoLocal = 0;
+
+  function usuarioEstaDigitando(){
+    const el = document.activeElement;
+    if(!el) return false;
+    const app = document.getElementById('app');
+    if(!app || !app.contains(el)) return false;
+    const digitavel = el.tagName === 'INPUT' || el.tagName === 'TEXTAREA';
+    if(!digitavel) return false;
+    // considera "digitando" enquanto o campo estiver focado, e também
+    // por uma folga curta após a última tecla, pra cobrir o instante do blur
+    return true;
+  }
+
+  function gerarCodigoSync(){
+    const alfabeto = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sem 0/O/1/I pra não confundir
+    let codigo = '';
+    for(let i=0;i<6;i++) codigo += alfabeto[Math.floor(Math.random()*alfabeto.length)];
+    return codigo;
+  }
+
+  function aplicarEstadoRemotoPendente(){
+    if(!estadoRemotoPendente) return;
+    if(usuarioEstaDigitando()){
+      clearTimeout(aplicarPendenteTimeout);
+      aplicarPendenteTimeout = setTimeout(aplicarEstadoRemotoPendente, 700);
+      return;
+    }
+    const recebido = estadoRemotoPendente;
+    estadoRemotoPendente = null;
+    const migrado = migrar(recebido);
+    let mudou = true;
+    try{ mudou = JSON.stringify(migrado) !== JSON.stringify(estado); }catch(e){}
+    if(!mudou) return; // era só o eco da própria escrita confirmada pelo servidor
+    estado = migrado;
+    obterMes(estado.mesAtual);
+    aplicarTema();
+    atualizarRotulosNomes();
+    atualizarCabecalhoMes();
+    atualizarPaleta();
+    renderTudo();
+    if(document.getElementById('modalAtividades') && !document.getElementById('modalAtividades').classList.contains('oculto')) renderAtividades();
+    try{ localStorage.setItem('controle-de-gastos-estado', JSON.stringify(estado)); }catch(e){}
+  }
+
+  function inscreverSync(codigo){
+    if(!dbSync) return;
+    if(unsubscribeSync) unsubscribeSync();
+    unsubscribeSync = dbSync.collection('casais').doc(codigo).onSnapshot(snap=>{
+      if(snap.metadata.hasPendingWrites) return; // ignora eco da própria escrita local
+      if(!snap.exists) return;
+      const dados = snap.data();
+      if(!dados || !dados.estado) return;
+      estadoRemotoPendente = dados.estado;
+      aplicarEstadoRemotoPendente();
+    }, ()=>{ atualizarStatusSync('erro', 'Não foi possível manter a conexão. Verifique sua internet.'); });
+  }
+
+  // aplica a atualização pendente assim que o campo perder o foco, sem esperar o intervalo todo
+  document.addEventListener('focusout', e=>{
+    if(!estadoRemotoPendente) return;
+    if(e.target && (e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')){
+      setTimeout(aplicarEstadoRemotoPendente, 250);
+    }
+  }, true);
+
+  function enviarParaSync(){
+    if(!dbSync || !grupoId) return;
+    dbSync.collection('casais').doc(grupoId).set({
+      estado: estado,
+      atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    }, {merge:true}).catch(()=>{});
+  }
+
+  function conectarComoGrupo(codigo){
+    grupoId = codigo;
+    localStorage.setItem('controle-de-gastos-grupo', codigo);
+    inscreverSync(codigo);
+  }
+
+  function desconectarSync(){
+    if(unsubscribeSync) unsubscribeSync();
+    unsubscribeSync = null;
+    grupoId = null;
+    localStorage.removeItem('controle-de-gastos-grupo');
+  }
+
+  function atualizarStatusSync(tipo, msg){
+    const el = document.getElementById('syncMsg');
+    if(!el) return;
+    el.textContent = msg || '';
+    el.className = 'sync-msg ' + (tipo||'');
+  }
+
+  function renderModalSync(){
+    const conectado = !!grupoId;
+    document.getElementById('syncStatusBox').classList.toggle('conectado', conectado);
+    document.getElementById('syncStatusTitulo').textContent = conectado ? 'Sincronizando com seu par' : 'Usando só neste aparelho';
+    document.getElementById('syncStatusSub').textContent = conectado ? 'As alterações aparecem nos dois aparelhos em tempo real.' : 'Seus dados ficam só aqui, sem sincronizar.';
+    document.getElementById('syncSemConexao').classList.toggle('oculto', conectado);
+    document.getElementById('syncComConexao').classList.toggle('oculto', !conectado);
+    if(conectado) document.getElementById('syncCodigoAtual').textContent = grupoId;
+    atualizarStatusSync('', '');
+  }
+
+  // ---------- feed de atividades (quem adicionou/removeu o quê) ----------
+  function registrarAtividade(pessoaChave, acao, item){
+    if(!estado.atividades) estado.atividades = [];
+    const nomePessoa = estado.nomes?.[pessoaChave] || (pessoaChave==='p1'?'Pessoa 1':'Pessoa 2');
+    estado.atividades.unshift({
+      id: 'at-'+Date.now()+Math.random().toString(16).slice(2),
+      quando: new Date().toISOString(),
+      pessoa: nomePessoa,
+      acao: acao, // 'adicionou' | 'removeu'
+      categoria: item.categoria,
+      descricao: item.descricao || '',
+      valor: item.valor || 0
+    });
+    estado.atividades = estado.atividades.slice(0, 40);
+  }
+
+  function tempoRelativo(iso){
+    const diffMs = Date.now() - new Date(iso).getTime();
+    const min = Math.floor(diffMs/60000);
+    if(min < 1) return 'agora mesmo';
+    if(min < 60) return `há ${min} min`;
+    const h = Math.floor(min/60);
+    if(h < 24) return `há ${h}h`;
+    const d = Math.floor(h/24);
+    if(d < 7) return `há ${d}d`;
+    return rotuloDataHora(iso);
+  }
+
+  function renderAtividades(){
+    const lista = estado.atividades || [];
+    const cont = document.getElementById('listaAtividades');
+    if(!cont) return;
+    if(lista.length === 0){
+      cont.innerHTML = '<p class="card-sub" style="margin:10px 0;">Nenhuma movimentação ainda.</p>';
+      return;
+    }
+    cont.innerHTML = lista.map(a=>{
+      const sinal = a.acao === 'removeu' ? '−' : '+';
+      const cor = a.acao === 'removeu' ? 'var(--red)' : 'var(--green)';
+      const descTxt = a.descricao ? ` (${a.descricao})` : '';
+      return `<div class="atividade-item">
+        <div>
+          <strong>${a.pessoa}</strong> ${a.acao} <strong>${a.categoria}</strong>${descTxt}
+          <div class="atividade-quando">${tempoRelativo(a.quando)}</div>
+        </div>
+        <div class="atividade-valor" style="color:${cor};">${sinal} ${formatarMoeda(a.valor)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function formatarMoeda(v){
+    v = Number(v) || 0;
+    return v.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+  }
+  function formatarMoedaCurta(v){
+    v = Number(v) || 0;
+    if(v >= 1000) return "R$ " + (v/1000).toLocaleString('pt-BR',{maximumFractionDigits:1}) + "mil";
+    return "R$ " + v.toLocaleString('pt-BR',{maximumFractionDigits:0});
+  }
+
+  function totalPessoa(p){ return p.gastos.reduce((s,i)=>s+(Number(i.valor)||0),0); }
+  function rendaPessoa(p){ return (Number(p.salario)||0) + (Number(p.rendaExtra)||0); }
+  function investimentoPessoaMes(chavePessoa, chaveM=estado.mesAtual){
+    return (estado.metas||[]).reduce((s,m)=>{
+      const valor = (m.contribuicoes||{})[chaveM];
+      if(valor && typeof valor === 'object') return s + (Number(valor[chavePessoa])||0);
+      return chavePessoa === 'p1' ? s + (Number(valor)||0) : s;
+    },0);
+  }
+  function totalSaidasPessoa(p, chavePessoa){ return totalPessoa(p) + investimentoPessoaMes(chavePessoa); }
+  function contribuicaoMetaPessoa(meta, mes, pessoa){
+    const valor = (meta.contribuicoes||{})[mes];
+    if(valor && typeof valor === 'object') return Number(valor[pessoa])||0;
+    return pessoa === 'p1' ? Number(valor)||0 : 0;
+  }
+  function iconeCategoria(nome){
+    const n = String(nome||'').toLowerCase();
+    if(/mercado|supermercado|feira/.test(n)) return '🛒';
+    if(/casa|aluguel|moradia|condom/.test(n)) return '🏠';
+    if(/transporte|combust|gasolina|uber|ônibus|onibus/.test(n)) return '🚗';
+    if(/comida|restaurante|lanche|delivery/.test(n)) return '🍽️';
+    if(/saúde|saude|farmácia|farmacia|médic|medic/.test(n)) return '💊';
+    if(/lazer|cinema|jogo|viagem/.test(n)) return '🎟️';
+    if(/educa|curso|escola|faculdade/.test(n)) return '📚';
+    if(/conta|luz|água|agua|internet|telefone/.test(n)) return '🧾';
+    if(/roupa|vest/.test(n)) return '👕';
+    return '💸';
+  }
+  function rotuloDataHora(iso){ return new Date(iso).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}); }
+
+  function estaAcimaLimite(item){
+    return (Number(item.limite)||0) > 0 && (Number(item.valor)||0) > (Number(item.limite)||0);
+  }
+  function infoPagamento(item){
+    switch(item.pagamento){
+      case 'pix': return {classe:'pix', emoji:'🔑', titulo:'Pago via Pix', texto:'Pix'};
+      case 'debito': return {classe:'debito', emoji:'💳', titulo:'Pago no cartão de débito', texto:'Débito'};
+      case 'credito': return {classe:'credito', emoji:'💳', titulo:'Pago no cartão de crédito', texto:'Crédito'};
+      default: return null;
+    }
+  }
+  function infoParcela(item){
+    if(!item.parcela) return null;
+    const partes = String(item.parcela).split('/');
+    const atual = parseInt(partes[0]), total = parseInt(partes[1]);
+    if(!isNaN(atual) && !isNaN(total) && atual>=total) return {texto:'última parcela', ultima:true};
+    return {texto:item.parcela, ultima:false};
+  }
+  function atualizarAvisoLinha(pessoa, idx){
+    const item = dadosPessoa(pessoa).gastos[idx];
+    const linha = document.getElementById(`linha-${pessoa}-${idx}`);
+    const aviso = document.getElementById(`aviso-${pessoa}-${idx}`);
+    const acima = estaAcimaLimite(item);
+    if(linha) linha.classList.toggle('acima-limite', acima);
+    if(aviso) aviso.textContent = acima ? `Passou o limite de ${formatarMoeda(item.limite)}` : '';
+  }
+  function atualizarBadgeParcela(pessoa, idx){
+    const item = dadosPessoa(pessoa).gastos[idx];
+    const el = document.getElementById(`badge-parcela-${pessoa}-${idx}`);
+    if(!el) return;
+    const info = infoParcela(item);
+    if(!info){ el.classList.add('oculto'); el.textContent=''; el.classList.remove('ultima'); return; }
+    el.classList.remove('oculto');
+    el.classList.toggle('ultima', info.ultima);
+    el.textContent = info.texto;
+  }
+
+  function mesAnteriorExistente(chave){
+    const anteriores = Object.keys(estado.meses).filter(c=>c<chave).sort();
+    return anteriores.length ? anteriores[anteriores.length-1] : null;
+  }
+  function criarMesComBase(chave){
+    const base = mesAnteriorExistente(chave);
+    if(!base) return dadosMesPadrao();
+    const bd = estado.meses[base];
+    function copiarPessoa(p){
+      return { salario:0, rendaExtra: Number(p.rendaExtra)||0, gastos: p.gastos.map(it => ({
+        categoria: it.categoria,
+        descricao: it.fixo ? (it.descricao||'') : '',
+        valor: it.fixo ? (it.valor||0) : 0,
+        limite: it.limite||0,
+        parcela: '',
+        fixo: !!it.fixo,
+        pagamento: it.fixo ? (it.pagamento||'') : '',
+        fixoId: it.fixo ? (it.fixoId||'') : ''
+      })) };
+    }
+    return { p1: copiarPessoa(bd.p1), p2: copiarPessoa(bd.p2) };
+  }
+  function obterMes(chave){
+    if(!estado.meses[chave]) estado.meses[chave] = criarMesComBase(chave);
+    return estado.meses[chave];
+  }
+  function propagarGastoFixo(chavePessoa, itemBase){
+    if(!itemBase.fixo || !itemBase.fixoId) return;
+    Object.keys(estado.meses).filter(c=>c>estado.mesAtual).forEach(mes=>{
+      const pessoa = obterMes(mes)[chavePessoa];
+      const existente = pessoa.gastos.find(item=>item.fixoId===itemBase.fixoId);
+      if(!existente) pessoa.gastos.push({...itemBase, valor:itemBase.valor, parcela:''});
+    });
+  }
+  function dadosPessoa(chave){ return obterMes(estado.mesAtual)[chave]; }
+
+  function mesesOrdenados(){ return Object.keys(estado.meses).sort(); }
+
+  function totalMesCombinado(chaveM){ const m = estado.meses[chaveM]; return totalPessoa(m.p1) + totalPessoa(m.p2) + investimentoPessoaMes('p1',chaveM) + investimentoPessoaMes('p2',chaveM); }
+  function rendaMesCombinada(chaveM){ const m=estado.meses[chaveM]; return rendaPessoa(m.p1)+rendaPessoa(m.p2); }
+  function registrarBackup(tipo, destino){
+    if(!estado.historicoBackup) estado.historicoBackup=[];
+    estado.historicoBackup.unshift({tipo, destino, quando:new Date().toISOString()});
+    estado.historicoBackup = estado.historicoBackup.slice(0,12);
+  }
+  function atualizarPaleta(){
+    document.body.classList.remove('paleta-menta','paleta-azul','paleta-rosa','paleta-amarela');
+    if(estado.paleta && estado.paleta !== 'original') document.body.classList.add('paleta-'+estado.paleta);
+    document.querySelectorAll('.palette-dot').forEach(b=>b.classList.toggle('ativa',b.dataset.paleta===estado.paleta));
+  }
+
+  function migrar(obj){
+    if(!obj.versao){
+      // formato antigo: matheus/andreia direto no topo, sem meses
+      const mesInicial = obj.mes ? obj.mes : chaveMes(new Date());
+      const chave = /\d{4}-\d{2}/.test(mesInicial) ? mesInicial : chaveMes(new Date());
+      ["matheus","andreia"].forEach(chaveAntiga=>{
+        const p = obj[chaveAntiga];
+        if(p && !p.gastos && (p.fixos || p.extras)){
+          p.gastos = (p.fixos||[]).concat(p.extras||[]);
+          delete p.fixos; delete p.extras;
+        }
+      });
+      const novo = estadoPadrao();
+      novo.tema = obj.tema || "claro";
+      novo.mesAtual = chave;
+      novo.meses = {};
+      novo.meses[chave] = {
+        p1: obj.matheus || dadosMesPadrao().p1,
+        p2: obj.andreia || dadosMesPadrao().p2
+      };
+      novo.nomes = { p1:"Pessoa 1", p2:"Pessoa 2" };
+      return novo;
+    }
+    if(!obj.metas) obj.metas = [];
+    obj.metas.forEach(meta=>{
+      if(meta.saldoInicial===undefined) meta.saldoInicial=0;
+      if(!meta.contribuicoes) meta.contribuicoes={};
+      Object.keys(meta.contribuicoes).forEach(mes=>{
+        const valor = meta.contribuicoes[mes];
+        if(typeof valor !== 'object') meta.contribuicoes[mes] = {p1:Number(valor)||0,p2:0};
+        else meta.contribuicoes[mes] = {p1:Number(valor.p1)||0,p2:Number(valor.p2)||0};
+      });
+    });
+    if(!obj.layoutResumo) obj.layoutResumo = ["renda","entradas","comparativo","categorias","metas"];
+    if(!obj.layoutResumo.includes("entradas")) obj.layoutResumo.splice(1,0,"entradas");
+    if(!obj.paleta) obj.paleta = "original";
+    if(!obj.historicoBackup) obj.historicoBackup = [];
+    if(!obj.atividades) obj.atividades = [];
+    Object.values(obj.meses||{}).forEach(m=>{ ["p1","p2"].forEach(k=>{ if(m[k]) { if(m[k].rendaExtra===undefined) m[k].rendaExtra=0; if(m[k].investimentoObjetivo===undefined) m[k].investimentoObjetivo=0; } }); });
+    if(!obj.graficoComparativoTipo) obj.graficoComparativoTipo = "barras";
+    if(!obj.graficoCategoriasTipo) obj.graficoCategoriasTipo = "rosca";
+    if(!obj.graficoHistoricoTipo) obj.graficoHistoricoTipo = "gastos";
+    if(!obj.nomes) obj.nomes = { p1:"Pessoa 1", p2:"Pessoa 2" };
+    Object.values(obj.meses||{}).forEach(m=>{ ["p1","p2"].forEach(k=>{
+      (m[k]?.gastos||[]).forEach(item=>{
+        if(item.pagamento===undefined){ item.pagamento = item.cartao ? 'credito' : ''; }
+        delete item.cartao;
+      });
+    }); });
+    return obj;
+  }
+
+  async function carregar(){
+    try{
+      const bruto = localStorage.getItem('controle-de-gastos-estado');
+      estado = bruto ? migrar(JSON.parse(bruto)) : estadoPadrao();
+    }catch(e){
+      estado = estadoPadrao();
+    }
+    obterMes(estado.mesAtual);
+    aplicarTema();
+    atualizarRotulosNomes();
+    atualizarCabecalhoMes();
+    atualizarPaleta();
+    document.getElementById('status').classList.add('oculto');
+    document.getElementById('viewResumo').classList.remove('oculto');
+    renderTudo();
+    if(grupoId) inscreverSync(grupoId);
+  }
+
+  function salvar(){
+    clearTimeout(salvarTimeout);
+    salvarTimeout = setTimeout(async ()=>{
+      try{ localStorage.setItem('controle-de-gastos-estado', JSON.stringify(estado));
+        const backupLabel = document.getElementById('ultimoBackupLabel');
+        if(backupLabel) backupLabel.textContent = estado.historicoBackup?.[0] ? `Último: ${rotuloDataHora(estado.historicoBackup[0].quando)}` : 'Backup local automático ativo.'; }
+      catch(e){ /* tenta de novo na próxima edição */ }
+      if(grupoId) enviarParaSync();
+    }, 350);
+  }
+
+  // ---------- tema claro/escuro + tema por aba ----------
+  function aplicarTema(){
+    const escuro = estado.tema === "escuro";
+    document.body.classList.toggle('dark', escuro);
+    document.getElementById('iconeTema').innerHTML = escuro ? ICONE_LUA : ICONE_SOL;
+  }
+  document.getElementById('btnTema').addEventListener('click', ()=>{
+    estado.tema = estado.tema === "escuro" ? "claro" : "escuro";
+    aplicarTema();
+    salvar();
+  });
+
+  function aplicarTemaAba(aba){
+    document.body.classList.remove('tema-p1','tema-p2','tema-metas','tema-historico');
+    if(aba==='p1') document.body.classList.add('tema-p1');
+    else if(aba==='p2') document.body.classList.add('tema-p2');
+    else if(aba==='metas') document.body.classList.add('tema-metas');
+    else if(aba==='historico') document.body.classList.add('tema-historico');
+  }
+
+  // ---------- confirmação de remoção ----------
+  function pedirConfirmacao(msg, aoConfirmar){
+    document.getElementById('confirmMsg').textContent = msg;
+    acaoConfirmar = aoConfirmar;
+    document.getElementById('confirmOverlay').classList.remove('oculto');
+  }
+  document.getElementById('confirmCancelar').onclick = ()=>{
+    document.getElementById('confirmOverlay').classList.add('oculto');
+    acaoConfirmar = null;
+  };
+  document.getElementById('confirmRemover').onclick = ()=>{
+    if(acaoConfirmar) acaoConfirmar();
+    document.getElementById('confirmOverlay').classList.add('oculto');
+    acaoConfirmar = null;
+  };
+
+  // ---------- modal de nomes ----------
+  document.getElementById('btnNomes').addEventListener('click', ()=>{
+    document.getElementById('inputNomeP1').value = estado.nomes.p1;
+    document.getElementById('inputNomeP2').value = estado.nomes.p2;
+    document.getElementById('modalNomes').classList.remove('oculto');
+  });
+  document.getElementById('cancelarNomes').onclick = ()=> document.getElementById('modalNomes').classList.add('oculto');
+  document.getElementById('salvarNomes').onclick = ()=>{
+    const n1 = document.getElementById('inputNomeP1').value.trim();
+    const n2 = document.getElementById('inputNomeP2').value.trim();
+    if(n1) estado.nomes.p1 = n1;
+    if(n2) estado.nomes.p2 = n2;
+    document.querySelectorAll('[data-drawer-name="p1"]').forEach(el=>el.textContent=estado.nomes.p1);
+    document.querySelectorAll('[data-drawer-name="p2"]').forEach(el=>el.textContent=estado.nomes.p2);
+    document.getElementById('modalNomes').classList.add('oculto');
+    atualizarRotulosNomes();
+    renderTudo();
+    salvar();
+  };
+  function atualizarRotulosNomes(){
+    document.querySelector('[data-rotulo-p1]').textContent = estado.nomes.p1;
+    document.querySelector('[data-rotulo-p2]').textContent = estado.nomes.p2;
+  }
+
+  // ---------- navegação de mês ----------
+  function atualizarCabecalhoMes(){
+    document.getElementById('mesAtualLabel').textContent = rotuloMes(estado.mesAtual);
+  }
+  document.getElementById('mesAnterior').addEventListener('click', ()=> navegarMes(-1));
+  document.getElementById('mesProximo').addEventListener('click', ()=> navegarMes(1));
+  function navegarMes(delta){
+    estado.mesAtual = deslocarMes(estado.mesAtual, delta);
+    obterMes(estado.mesAtual);
+    atualizarCabecalhoMes();
+    renderTudo();
+    salvar();
+  }
+  document.getElementById('mesAtualLabel').addEventListener('click', abrirModalMeses);
+  function abrirModalMeses(){
+    const lista = mesesOrdenados().slice().reverse();
+    document.getElementById('listaMesesModal').innerHTML = lista.map(chave=>{
+      const ativo = chave === estado.mesAtual ? 'mes-ativo' : '';
+      return `<button class="${ativo}" data-ir-mes="${chave}"><span>${rotuloMes(chave)}</span><span>${formatarMoedaCurta(totalMesCombinado(chave))}</span></button>`;
+    }).join("");
+    document.querySelectorAll('[data-ir-mes]').forEach(btn=>{
+      btn.onclick = ()=>{
+        estado.mesAtual = btn.dataset.irMes;
+        obterMes(estado.mesAtual);
+        atualizarCabecalhoMes();
+        renderTudo();
+        salvar();
+        document.getElementById('modalMeses').classList.add('oculto');
+      };
+    });
+    document.getElementById('modalMeses').classList.remove('oculto');
+  }
+  document.getElementById('fecharModalMeses').onclick = ()=> document.getElementById('modalMeses').classList.add('oculto');
+
+  // ---------- construir a aba de uma pessoa ----------
+  function construirAbaPessoa(chave){
+    const p = dadosPessoa(chave);
+    const nome = estado.nomes[chave];
+    let html = "";
+
+    html += `<section class="card">
+      <div class="nome-editavel-row">
+        <span class="selo ${chave}">${nome.charAt(0).toUpperCase()}</span>
+        <input type="text" class="pessoa-nome-input" data-pessoa-nome="${chave}" value="${nome}">
+      </div>
+      <p class="card-titulo" style="margin-top:2px;">Salário do mês</p>
+      <p class="card-sub">Quanto ${nome} recebeu esse mês.</p>
+      <div class="salario-row"><span class="prefixo">R$</span><input type="number" inputmode="decimal" class="input-salario" data-pessoa="${chave}" value="${p.salario || ''}" placeholder="0,00"></div>
+      <div class="renda-extra-row"><label>Renda extra / valor além do salário</label><input type="number" inputmode="decimal" class="input-renda-extra" data-pessoa="${chave}" value="${p.rendaExtra || ''}" placeholder="0,00"></div>
+    </section>`;
+
+    html += `<section class="card">
+      <p class="card-titulo">Gastos</p>
+      <p class="card-sub">Preencha os valores, ou remova uma categoria que você não usa.</p>
+      <div class="ficha">`;
+
+    if(p.gastos.length === 0){
+      html += `<p class="card-sub" style="margin:14px 0 0;">Nenhuma categoria ainda. Toque em "+ Adicionar categoria" pra criar a primeira.</p>`;
+    }
+
+    p.gastos.forEach((item, i)=>{
+      const acimaInicial = estaAcimaLimite(item);
+      const infoP = infoParcela(item);
+      const infoPg = infoPagamento(item);
+      html += `<div class="linha-gasto ${acimaInicial?'acima-limite':''}" id="linha-${chave}-${i}">
+        <div>
+          <div class="categoria-nome-linha">
+            <span class="categoria-icone" title="${item.categoria}">${iconeCategoria(item.categoria)}</span><span class="categoria-nome">${item.categoria}</span>
+            <span class="badge-fixo ${item.fixo?'':'oculto'}" id="badge-fixo-${chave}-${i}" title="Repete todo mês">📌</span>
+            <span class="badge-parcela ${infoP?'':'oculto'} ${infoP&&infoP.ultima?'ultima':''}" id="badge-parcela-${chave}-${i}">${infoP?infoP.texto:''}</span>
+            <span class="badge-pagamento ${infoPg?infoPg.classe:''} ${infoPg?'':'oculto'}" title="${infoPg?infoPg.titulo:''}"><span class="emoji">${infoPg?infoPg.emoji:''}</span>${infoPg?infoPg.texto:''}</span>
+          </div>
+          <input class="categoria-desc-input" data-pessoa="${chave}" data-idx="${i}" data-campo="descricao" placeholder="adicionar descrição..." value="${item.descricao||''}">
+          <div class="aviso-limite" id="aviso-${chave}-${i}">${acimaInicial ? ('Passou o limite de '+formatarMoeda(item.limite)) : ''}</div>
+          <button class="link-mais-opcoes" data-toggle-opcoes="${chave}-${i}">mais opções</button>
+          <div class="opcoes-extra oculto" id="opcoes-${chave}-${i}">
+            <div class="opcoes-extra-campo">
+              <label>Limite mensal (opcional)</label>
+              <input type="number" inputmode="decimal" class="input-limite" data-pessoa="${chave}" data-idx="${i}" value="${item.limite||''}" placeholder="0,00">
+            </div>
+            <div class="opcoes-extra-campo">
+              <label>Parcela (ex: 3/10)</label>
+              <input type="text" class="input-parcela" data-pessoa="${chave}" data-idx="${i}" value="${item.parcela||''}" placeholder="3/10">
+            </div>
+            <label class="opcoes-extra-check">
+              <input type="checkbox" class="input-fixo" data-pessoa="${chave}" data-idx="${i}" ${item.fixo?'checked':''}>
+              Repetir automaticamente todo mês
+            </label>
+          </div>
+        </div>
+        <div class="valor-input-wrap">
+          <span>R$</span>
+          <input type="number" inputmode="decimal" class="valor-input" data-pessoa="${chave}" data-idx="${i}" data-campo="valor" value="${item.valor||''}" placeholder="0,00">
+        </div>
+        <button class="btn-remover" data-pessoa="${chave}" data-idx="${i}" title="Remover categoria">✕</button>
+      </div>`;
+    });
+
+    html += `</div>
+      <div class="total-row">
+        <span class="total-label">Total de ${nome}</span>
+        <span class="total-valor">${formatarMoeda(totalPessoa(p))}</span>
+      </div>
+
+      <button class="btn-add" data-abrir-form="${chave}">+ Adicionar categoria</button>
+
+      <div class="form-novo" id="form-${chave}">
+        <label>Categoria</label>
+        <input type="text" id="novaCategoria-${chave}" placeholder="Ex: Presente, Mercado...">
+        <label>Descrição (opcional)</label>
+        <input type="text" id="novaDescricao-${chave}" placeholder="Ex: aniversário da mãe">
+        <label>Valor</label>
+        <input type="number" inputmode="decimal" id="novoValor-${chave}" placeholder="0,00">
+        <label>Tipo de gasto</label>
+        <select id="novoTipoGasto-${chave}" class="select-pagamento" data-tipo-gasto-select="${chave}">
+          <option value="mes">Somente neste mês</option>
+          <option value="fixo">Gasto fixo</option>
+        </select>
+        <small class="mini-info">Gastos fixos aparecem automaticamente nos próximos meses e podem ser alterados separadamente.</small>
+        <label>Forma de pagamento</label>
+        <div class="pagamento-grupo" data-pagamento-grupo="${chave}">
+          <button type="button" class="pagamento-opcao ativa" data-pagamento-btn="${chave}" data-pagamento-valor="dinheiro"><span class="pagamento-emoji">💵</span><span>Dinheiro</span></button>
+          <button type="button" class="pagamento-opcao" data-pagamento-btn="${chave}" data-pagamento-valor="pix"><span class="pagamento-emoji">🔑</span><span>Pix</span></button>
+          <button type="button" class="pagamento-opcao" data-pagamento-btn="${chave}" data-pagamento-valor="debito"><span class="pagamento-emoji">💳</span><span>Débito</span></button>
+          <button type="button" class="pagamento-opcao" data-pagamento-btn="${chave}" data-pagamento-valor="credito"><span class="pagamento-emoji">💳</span><span>Crédito</span></button>
+        </div>
+        <input type="hidden" id="novoPagamento-${chave}" value="dinheiro">
+        <div class="campo-parcelas oculto" id="campoParcelas-${chave}">
+          <label>Parcelado em quantas vezes?</label>
+          <input type="number" min="1" step="1" inputmode="numeric" id="novoParcelas-${chave}" placeholder="Ex: 1 (à vista) ou 6" value="1">
+          <small class="mini-info">Use 1 para compra à vista no cartão. As parcelas seguintes são lançadas automaticamente nos próximos meses.</small>
+        </div>
+        <div class="form-botoes">
+          <button class="btn-cancelar" data-cancelar-form="${chave}">Cancelar</button>
+          <button class="btn-salvar" data-salvar-form="${chave}">Adicionar</button>
+        </div>
+      </div>
+    </section>`;
+
+    return html;
+  }
+
+  // ---------- renderizar tudo ----------
+  function renderTudo(){
+    document.getElementById('viewP1').innerHTML = construirAbaPessoa('p1');
+    document.getElementById('viewP2').innerHTML = construirAbaPessoa('p2');
+    renderResumo();
+    renderMetas();
+    renderHistorico();
+    ligarEventosDinamicos();
+    aplicarLayoutResumo();
+  }
+
+  function renderResumo(){
+    const p1 = dadosPessoa('p1'), p2 = dadosPessoa('p2');
+    const gastosP1 = totalPessoa(p1), gastosP2 = totalPessoa(p2);
+    const objetivoP1 = investimentoPessoaMes('p1'), objetivoP2 = investimentoPessoaMes('p2');
+    const totalP1 = gastosP1 + objetivoP1, totalP2 = gastosP2 + objetivoP2;
+    const salP1 = rendaPessoa(p1), salP2 = rendaPessoa(p2);
+    const sobraP1 = salP1 - totalP1, sobraP2 = salP2 - totalP2;
+    const sobraGeral = sobraP1 + sobraP2;
+
+    const saldoEl = document.getElementById('saldoGeral');
+    saldoEl.textContent = formatarMoeda(sobraGeral);
+    saldoEl.className = "saldo-valor " + (sobraGeral < 0 ? "negativo" : "positivo");
+
+    document.getElementById('chipP1').textContent = `${estado.nomes.p1} ${formatarMoeda(sobraP1)}`;
+    document.getElementById('chipP2').textContent = `${estado.nomes.p2} ${formatarMoeda(sobraP2)}`;
+
+    document.getElementById('resumoNomeP1').textContent = estado.nomes.p1;
+    document.getElementById('resumoNomeP2').textContent = estado.nomes.p2;
+    document.getElementById('seloResumoP1').textContent = estado.nomes.p1.charAt(0).toUpperCase();
+    document.getElementById('seloResumoP2').textContent = estado.nomes.p2.charAt(0).toUpperCase();
+
+    document.getElementById('resumoP1Numeros').textContent = `${formatarMoeda(totalP1)} de ${formatarMoeda(salP1)}`;
+    document.getElementById('resumoP2Numeros').textContent = `${formatarMoeda(totalP2)} de ${formatarMoeda(salP2)}`;
+    document.getElementById('resumoEntradas').innerHTML = `<b>${estado.nomes.p1}:</b> salário ${formatarMoeda(p1.salario)} + extra ${formatarMoeda(p1.rendaExtra)}<br><b>${estado.nomes.p2}:</b> salário ${formatarMoeda(p2.salario)} + extra ${formatarMoeda(p2.rendaExtra)}`;
+    const aportes = objetivoP1 + objetivoP2;
+    document.getElementById('resumoInvestimentos').innerHTML = aportes ? `<b>Investimento no objetivo:</b><br>${estado.nomes.p1}: ${formatarMoeda(objetivoP1)}<br>${estado.nomes.p2}: ${formatarMoeda(objetivoP2)}<br><span class="mini-info">Esse valor já foi descontado da sobra de cada pessoa.</span>` : '<b>Investimento no objetivo:</b> nenhum aporte neste mês';
+    const saidasTotal = totalP1 + totalP2;
+    const diferencaCasal = Math.abs(totalP1 - totalP2);
+    const quemMais = totalP1 === totalP2 ? 'Os dois estão iguais neste mês.' : `${totalP1 > totalP2 ? estado.nomes.p1 : estado.nomes.p2} teve mais saídas (${formatarMoeda(diferencaCasal)} de diferença).`;
+    document.getElementById('resumoEquilibrio').innerHTML = saidasTotal ? `<b>Equilíbrio do casal:</b> ${quemMais}` : '<b>Equilíbrio do casal:</b> ainda sem saídas lançadas.';
+
+    const pctP1 = salP1 > 0 ? Math.min(100,(totalP1/salP1)*100) : (totalP1>0?100:0);
+    const pctP2 = salP2 > 0 ? Math.min(100,(totalP2/salP2)*100) : (totalP2>0?100:0);
+    document.getElementById('barraP1').style.width = pctP1 + "%";
+    document.getElementById('barraP2').style.width = pctP2 + "%";
+
+    renderComparativo(salP1, gastosP1, objetivoP1, salP2, gastosP2, objetivoP2);
+    renderCategorias(p1, p2);
+    renderMetasResumo();
+    marcarPillsAtivas();
+  }
+
+  function marcarPillsAtivas(){
+    document.querySelectorAll('[data-comparativo-tipo]').forEach(b=>{
+      b.classList.toggle('ativo', b.dataset.comparativoTipo === estado.graficoComparativoTipo);
+    });
+    document.querySelectorAll('[data-categorias-tipo]').forEach(b=>{
+      b.classList.toggle('ativo', b.dataset.categoriasTipo === estado.graficoCategoriasTipo);
+    });
+    document.querySelectorAll('[data-historico-tipo]').forEach(b=>{
+      b.classList.toggle('ativo', b.dataset.historicoTipo === estado.graficoHistoricoTipo);
+    });
+  }
+
+  function renderComparativo(salP1, gastosP1, objetivoP1, salP2, gastosP2, objetivoP2){
+    const area = document.getElementById('areaComparativo');
+    if(estado.graficoComparativoTipo === "percentual"){
+      function pct(total, sal){ return sal>0 ? Math.min(100,(total/sal)*100) : (total>0?100:0); }
+      const p1pct = pct(gastosP1 + objetivoP1, salP1), p2pct = pct(gastosP2 + objetivoP2, salP2);
+      area.innerHTML = `
+        <div class="percentual-linha">
+          <div class="percentual-topo"><span class="nome" style="color:var(--matheus)">${estado.nomes.p1}</span><span class="pct">${p1pct.toFixed(0)}% do salário</span></div>
+          <div class="percentual-bg"><div class="percentual-fill" style="width:${p1pct}%;background:var(--matheus)"></div></div>
+        </div>
+        <div class="percentual-linha">
+          <div class="percentual-topo"><span class="nome" style="color:var(--andreia)">${estado.nomes.p2}</span><span class="pct">${p2pct.toFixed(0)}% do salário</span></div>
+          <div class="percentual-bg"><div class="percentual-fill" style="width:${p2pct}%;background:var(--andreia)"></div></div>
+        </div>`;
+    }else{
+      const maximo = Math.max(salP1, gastosP1, objetivoP1, salP2, gastosP2, objetivoP2, 1);
+      const alturaPx = 110;
+      function altura(v){ return Math.max(3, Math.round((v/maximo)*alturaPx)); }
+      area.innerHTML = `
+        <div class="barras-comparativo">
+          <div class="grupo-barra">
+            <div class="par-barras">
+              <div class="barra-vertical" style="height:${altura(salP1)}px;background:var(--gold)"><span class="rotulo-valor">${formatarMoedaCurta(salP1)}</span></div>
+              <div class="barra-vertical" style="height:${altura(gastosP1)}px;background:var(--red)"><span class="rotulo-valor">${formatarMoedaCurta(gastosP1)}</span></div>
+              <div class="barra-vertical" style="height:${altura(objetivoP1)}px;background:var(--green)"><span class="rotulo-valor">${formatarMoedaCurta(objetivoP1)}</span></div>
+            </div>
+            <span class="legenda-grupo" style="color:var(--matheus)">${estado.nomes.p1}</span>
+          </div>
+          <div class="grupo-barra">
+            <div class="par-barras">
+              <div class="barra-vertical" style="height:${altura(salP2)}px;background:var(--gold)"><span class="rotulo-valor">${formatarMoedaCurta(salP2)}</span></div>
+              <div class="barra-vertical" style="height:${altura(gastosP2)}px;background:var(--red)"><span class="rotulo-valor">${formatarMoedaCurta(gastosP2)}</span></div>
+              <div class="barra-vertical" style="height:${altura(objetivoP2)}px;background:var(--green)"><span class="rotulo-valor">${formatarMoedaCurta(objetivoP2)}</span></div>
+            </div>
+            <span class="legenda-grupo" style="color:var(--andreia)">${estado.nomes.p2}</span>
+          </div>
+        </div>
+        <div class="legenda-cores">
+          <span><span class="swatch" style="background:var(--gold)"></span>Renda</span>
+          <span><span class="swatch" style="background:var(--red)"></span>Gasto</span>
+          <span><span class="swatch" style="background:var(--green)"></span>Objetivo</span>
+        </div>`;
+    }
+  }
+
+  function listaItensCategorias(p1, p2){
+    const itens = [];
+    let contP1=0, contP2=0;
+    p1.gastos.forEach(it=>{
+      const v = Number(it.valor)||0;
+      if(v<=0) return;
+      itens.push({ nome: it.categoria, valor: v, cor: PALETA_P1[contP1 % PALETA_P1.length] });
+      contP1++;
+    });
+    p2.gastos.forEach(it=>{
+      const v = Number(it.valor)||0;
+      if(v<=0) return;
+      itens.push({ nome: it.categoria, valor: v, cor: PALETA_P2[contP2 % PALETA_P2.length] });
+      contP2++;
+    });
+    return itens;
+  }
+
+  function renderCategorias(p1, p2){
+    const area = document.getElementById('areaCategorias');
+    const itens = listaItensCategorias(p1, p2);
+    const total = itens.reduce((s,i)=>s+i.valor,0);
+    const ordenado = itens.slice().sort((x,y)=>y.valor-x.valor);
+
+    if(estado.graficoCategoriasTipo === "barras"){
+      if(ordenado.length === 0){
+        area.innerHTML = `<p class="card-sub" style="margin:0;">Nenhum gasto lançado ainda.</p>`;
+        return;
+      }
+      const maiorValor = ordenado[0].valor || 1;
+      area.innerHTML = ordenado.map(it=>{
+        const pct = Math.max(4,(it.valor/maiorValor)*100);
+        return `<div class="rank-cat-row">
+          <div class="rank-cat-topo"><span class="nome"><span class="swatch" style="background:${it.cor}"></span><span class="txt">${it.nome}</span></span><span class="valor">${formatarMoeda(it.valor)}</span></div>
+          <div class="rank-cat-bg"><div class="rank-cat-fill" style="width:${pct}%;background:${it.cor}"></div></div>
+        </div>`;
+      }).join("");
+      return;
+    }
+
+    // rosca (padrão)
+    area.innerHTML = `
+      <div class="donut-wrap">
+        <div class="donut" id="donutCategorias"><div class="donut-centro"><span class="valor" id="donutTotal">${formatarMoedaCurta(total)}</span><span class="rotulo">gasto total</span></div></div>
+        <div id="topCategorias" class="lista-top-categorias"></div>
+      </div>`;
+
+    const donut = document.getElementById('donutCategorias');
+    if(total <= 0){
+      donut.style.background = "var(--paper-deep)";
+    }else{
+      let acumulado = 0;
+      const stops = itens.map(it=>{
+        const inicio = (acumulado/total)*360;
+        acumulado += it.valor;
+        const fim = (acumulado/total)*360;
+        return `${it.cor} ${inicio}deg ${fim}deg`;
+      });
+      donut.style.background = `conic-gradient(${stops.join(",")})`;
+    }
+
+    const top = ordenado.slice(0,6);
+    let html = top.map(it => `
+      <div class="top-cat-row">
+        <span class="top-cat-nome"><span class="swatch" style="background:${it.cor}"></span><span class="txt">${it.nome}</span></span>
+        <span class="top-cat-valor">${formatarMoeda(it.valor)}</span>
+      </div>`).join("");
+    if(ordenado.length === 0){
+      html = `<p class="card-sub" style="margin:0;">Nenhum gasto lançado ainda.</p>`;
+    }else if(ordenado.length > 6){
+      html += `<div class="top-cat-mais">+ ${ordenado.length - 6} categoria(s) a mais</div>`;
+    }
+    document.getElementById('topCategorias').innerHTML = html;
+  }
+
+  // ---------- metas ----------
+  function totalGuardadoMeta(meta){
+    const inicial = Number(meta.saldoInicial)||0;
+    const aportes = Object.values(meta.contribuicoes||{}).reduce((s,v)=>{
+      if(v && typeof v === 'object') return s + (Number(v.p1)||0) + (Number(v.p2)||0);
+      return s + (Number(v)||0);
+    },0);
+    return inicial + aportes;
+  }
+  function faltaMeta(meta){
+    return Math.max(0, (Number(meta.valorObjetivo)||0) - totalGuardadoMeta(meta));
+  }
+  function pctMeta(meta){
+    const alvo = Number(meta.valorObjetivo)||0;
+    if(alvo<=0) return 0;
+    return Math.min(100, (totalGuardadoMeta(meta)/alvo)*100);
+  }
+
+  function renderMetasResumo(){
+    const area = document.getElementById('areaMetasResumo');
+    if(!estado.metas.length){
+      area.innerHTML = `<p class="card-sub" style="margin:0;">Nenhum objetivo criado ainda. Toque em "Metas" para criar o primeiro.</p>`;
+      return;
+    }
+    area.innerHTML = estado.metas.map(m=>{
+      const pct = pctMeta(m);
+      return `<div class="pessoa-resumo">
+        <div class="pessoa-topo">
+          <span class="pessoa-nome"><span class="selo meta">${(m.nome||"?").charAt(0).toUpperCase()}</span>${m.nome}</span>
+          <span class="pessoa-numeros">falta ${formatarMoeda(faltaMeta(m))}</span>
+        </div>
+        <div class="barra-bg"><div class="barra-fill" style="width:${pct}%;background:var(--gold)"></div></div>
+      </div>`;
+    }).join("");
+  }
+
+  function renderMetas(){
+    const lista = document.getElementById('metasLista');
+    if(!estado.metas.length){
+      lista.innerHTML = `<div class="meta-vazio">Você ainda não tem nenhum objetivo.<br>Que tal começar com uma geladeira, uma viagem ou a casa própria?</div>`;
+      return;
+    }
+    lista.innerHTML = estado.metas.map(m=>{
+      const guardado = totalGuardadoMeta(m);
+      const falta = faltaMeta(m);
+      const saldoInicial = Number(m.saldoInicial)||0;
+      const pct = pctMeta(m);
+      const contribAtual = (m.contribuicoes && m.contribuicoes[estado.mesAtual]) || {};
+      const contribP1 = typeof contribAtual === 'object' ? (Number(contribAtual.p1)||0) : Number(contribAtual)||0;
+      const contribP2 = typeof contribAtual === 'object' ? (Number(contribAtual.p2)||0) : 0;
+
+      const mesesComValor = mesesOrdenados().filter(c => m.contribuicoes && (contribuicaoMetaPessoa(m,c,'p1') + contribuicaoMetaPessoa(m,c,'p2'))>0);
+      const ultimosMeses = mesesComValor.slice(-8);
+      const maiorAporte = Math.max(1, ...ultimosMeses.map(c=>contribuicaoMetaPessoa(m,c,'p1')+contribuicaoMetaPessoa(m,c,'p2')));
+      const miniBarras = ultimosMeses.length ? ultimosMeses.map(c=>{
+        const v = contribuicaoMetaPessoa(m,c,'p1') + contribuicaoMetaPessoa(m,c,'p2');
+        const h = Math.max(3, Math.round((v/maiorAporte)*50));
+        return `<div class="meta-mini-grupo">
+          <div class="meta-mini-barra" style="height:${h}px;background:var(--gold)" title="${formatarMoeda(v)}"></div>
+          <span class="meta-mini-mes">${rotuloMesCurto(c)}</span>
+        </div>`;
+      }).join("") : `<p class="card-sub" style="margin:0;">Ainda sem aportes guardados.</p>`;
+
+      return `<div class="card meta-card" data-meta-card-id="${m.id}" style="border:1px solid var(--line);border-radius:14px;padding:16px;background:var(--paper);">
+        <input type="text" class="meta-nome-input" data-meta-id="${m.id}" data-meta-campo="nome" value="${m.nome}">
+        <div class="meta-campo-row">
+          <div class="meta-campo">
+            <label>Valor do objetivo</label>
+            <div class="caixa"><span>R$</span><input type="number" inputmode="decimal" data-meta-id="${m.id}" data-meta-campo="valorObjetivo" value="${m.valorObjetivo||''}"></div>
+          </div>
+          <div class="meta-campo">
+            <label>Já guardado antes</label>
+            <div class="caixa"><span>R$</span><input type="number" inputmode="decimal" data-meta-id="${m.id}" data-meta-campo="saldoInicial" value="${saldoInicial||''}" placeholder="0,00"></div>
+          </div>
+        </div>
+        <div class="meta-campo meta-campo-wide">
+          <label>Investimento no objetivo deste mês — Pessoa 1</label>
+          <div class="caixa"><span>R$</span><input type="number" inputmode="decimal" data-meta-id="${m.id}" data-meta-campo="contribuicaoMes" data-meta-pessoa="p1" value="${contribP1||''}" placeholder="0,00"></div>
+        </div>
+        <div class="meta-campo meta-campo-wide">
+          <label>Investimento no objetivo deste mês — Pessoa 2</label>
+          <div class="caixa"><span>R$</span><input type="number" inputmode="decimal" data-meta-id="${m.id}" data-meta-campo="contribuicaoMes" data-meta-pessoa="p2" value="${contribP2||''}" placeholder="0,00"></div>
+        </div>
+        <p class="mini-info">O valor deste mês será somado automaticamente ao que já está guardado.</p>
+        <div class="meta-progress-bg"><div class="meta-progress-fill" style="width:${pct}%"></div></div>
+        <div class="meta-numeros"><span>Guardado até agora <b>${formatarMoeda(guardado)}</b></span><span>Falta <b>${formatarMoeda(falta)}</b></span></div>
+        <p class="meta-historico-titulo">Guardado por mês</p>
+        <div class="meta-mini-barras">${miniBarras}</div>
+        <div class="meta-remover-linha"><button data-remover-meta="${m.id}">Remover objetivo</button></div>
+      </div>`;
+    }).join("");
+  }
+
+  function atualizarVisualMeta(metaId){
+    const meta = estado.metas.find(m=>m.id===metaId);
+    const card = document.querySelector(`[data-meta-card-id="${metaId}"]`);
+    if(!meta || !card) return;
+    const progresso = card.querySelector('.meta-progress-fill');
+    const numeros = card.querySelector('.meta-numeros');
+    if(progresso) progresso.style.width = pctMeta(meta) + '%';
+    if(numeros) numeros.innerHTML = `<span>Guardado até agora <b>${formatarMoeda(totalGuardadoMeta(meta))}</b></span><span>Falta <b>${formatarMoeda(faltaMeta(meta))}</b></span>`;
+  }
+
+  function ligarEventosMetas(){
+    document.querySelectorAll('[data-meta-campo="nome"]').forEach(inp=>{
+      inp.oninput = e=>{
+        const meta = estado.metas.find(m=>m.id===e.target.dataset.metaId);
+        meta.nome = e.target.value;
+        renderMetasResumo();
+        salvar();
+      };
+    });
+    document.querySelectorAll('[data-meta-campo="valorObjetivo"]').forEach(inp=>{
+      inp.oninput = e=>{
+        const meta = estado.metas.find(m=>m.id===e.target.dataset.metaId);
+        meta.valorObjetivo = parseFloat(e.target.value)||0;
+        atualizarVisualMeta(meta.id); renderMetasResumo(); renderResumo();
+        salvar();
+      };
+    });
+    document.querySelectorAll('[data-meta-campo="saldoInicial"]').forEach(inp=>{
+      inp.oninput = e=>{
+        const meta = estado.metas.find(m=>m.id===e.target.dataset.metaId);
+        meta.saldoInicial = parseFloat(e.target.value)||0;
+        atualizarVisualMeta(meta.id); renderMetasResumo(); renderResumo();
+        salvar();
+      };
+    });
+    document.querySelectorAll('[data-meta-campo="contribuicaoMes"]').forEach(inp=>{
+      inp.oninput = e=>{
+        const meta = estado.metas.find(m=>m.id===e.target.dataset.metaId);
+        if(!meta.contribuicoes) meta.contribuicoes = {};
+        const atual = meta.contribuicoes[estado.mesAtual];
+        const valores = atual && typeof atual === 'object' ? atual : {p1:Number(atual)||0,p2:0};
+        valores[e.target.dataset.metaPessoa] = parseFloat(e.target.value)||0;
+        meta.contribuicoes[estado.mesAtual] = {p1:Number(valores.p1)||0,p2:Number(valores.p2)||0};
+        atualizarVisualMeta(meta.id); renderMetasResumo(); renderResumo();
+        salvar();
+      };
+    });
+    document.querySelectorAll('[data-remover-meta]').forEach(btn=>{
+      btn.onclick = e=>{
+        const id = e.currentTarget.dataset.removerMeta;
+        const meta = estado.metas.find(m=>m.id===id);
+        pedirConfirmacao(`Remover o objetivo "${meta.nome}"?`, ()=>{
+          estado.metas = estado.metas.filter(m=>m.id!==id);
+          renderMetas(); renderMetasResumo();
+          salvar();
+        });
+      };
+    });
+  }
+
+  document.getElementById('btnAbrirNovaMeta').addEventListener('click', ()=>{
+    document.getElementById('formNovaMeta').classList.add('aberto');
+    document.getElementById('btnAbrirNovaMeta').classList.add('oculto');
+  });
+  document.getElementById('cancelarNovaMeta').addEventListener('click', ()=>{
+    document.getElementById('formNovaMeta').classList.remove('aberto');
+    document.getElementById('btnAbrirNovaMeta').classList.remove('oculto');
+  });
+  document.getElementById('salvarNovaMeta').addEventListener('click', ()=>{
+    const nome = document.getElementById('novaMetaNome').value.trim();
+    const valor = parseFloat(document.getElementById('novaMetaValor').value)||0;
+    if(!nome){ document.getElementById('novaMetaNome').focus(); return; }
+    estado.metas.push({ id: 'm'+Date.now()+Math.random().toString(16).slice(2), nome, valorObjetivo: valor, saldoInicial: 0, contribuicoes:{} });
+    document.getElementById('novaMetaNome').value = "";
+    document.getElementById('novaMetaValor').value = "";
+    document.getElementById('formNovaMeta').classList.remove('aberto');
+    document.getElementById('btnAbrirNovaMeta').classList.remove('oculto');
+    renderMetas(); renderMetasResumo();
+    ligarEventosMetas();
+    salvar();
+  });
+
+  // ---------- historico / fim de ano ----------
+  function renderGraficoLinhaSaldo(meses){
+    const valores = meses.map(c=>{
+      const m = estado.meses[c];
+      const sal = rendaMesCombinada(c);
+      return sal - totalMesCombinado(c);
+    });
+    const passo = 54;
+    const largura = Math.max(260, meses.length*passo);
+    const altura = 130;
+    const max = Math.max(...valores, 0);
+    const min = Math.min(...valores, 0);
+    const span = (max-min) || 1;
+    function y(v){ return altura - 26 - ((v-min)/span) * (altura-46); }
+    const pontos = valores.map((v,i)=>({x: 24 + i*passo, y: y(v), v}));
+    const linha = pontos.map(p=>`${p.x},${p.y}`).join(' ');
+    const baseY = y(0);
+    const circulos = pontos.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="4" style="fill:${p.v<0?'var(--red)':'var(--green)'}"/>`).join('');
+    const rotulos = meses.map((c,i)=>`<text x="${pontos[i].x}" y="${altura-6}" font-size="9" style="fill:var(--ink-soft)" text-anchor="middle">${rotuloMesCurto(c)}</text>`).join('');
+    return `<div style="width:100%;overflow-x:auto;"><svg width="${largura}" height="${altura}" viewBox="0 0 ${largura} ${altura}">
+      <line x1="0" y1="${baseY}" x2="${largura}" y2="${baseY}" style="stroke:var(--line)" stroke-dasharray="3,3"/>
+      <polyline points="${linha}" fill="none" style="stroke:var(--ink-soft)" stroke-width="2"/>
+      ${circulos}
+      ${rotulos}
+    </svg></div>`;
+  }
+
+  function renderHistorico(){
+    const meses = mesesOrdenados();
+    const destaqueEl = document.getElementById('histDestaque');
+    const barrasEl = document.getElementById('histBarras');
+    const listaEl = document.getElementById('histLista');
+
+    if(!meses.length){
+      destaqueEl.innerHTML = "";
+      barrasEl.innerHTML = "";
+      listaEl.innerHTML = `<p class="card-sub" style="margin:0;">Ainda não há meses registrados.</p>`;
+      return;
+    }
+
+    const totais = meses.map(c=>({chave:c, total: totalMesCombinado(c)}));
+    const maiorTotal = Math.max(...totais.map(t=>t.total), 1);
+    const mesMaisGasto = totais.slice().sort((a,b)=>b.total-a.total)[0];
+
+    if(mesMaisGasto.total > 0){
+      destaqueEl.innerHTML = `<div class="hist-destaque">
+        <span class="icone">📌</span>
+        <span class="texto">Mês com maiores saídas: <b>${rotuloMes(mesMaisGasto.chave)} — ${formatarMoeda(mesMaisGasto.total)}</b></span>
+      </div>`;
+    }else{
+      destaqueEl.innerHTML = "";
+    }
+
+    if(estado.graficoHistoricoTipo === 'saldo'){
+      barrasEl.innerHTML = renderGraficoLinhaSaldo(meses);
+    }else{
+      barrasEl.innerHTML = totais.map(t=>{
+        const h = Math.max(3, Math.round((t.total/maiorTotal)*100));
+        const classeMax = t.chave === mesMaisGasto.chave && t.total>0 ? 'max' : '';
+        return `<div class="hist-grupo">
+          <div class="hist-barra ${classeMax}" style="height:${h}px" title="${formatarMoeda(t.total)}"></div>
+          <span class="hist-mes-rotulo">${rotuloMesCurto(t.chave)}</span>
+        </div>`;
+      }).join("");
+    }
+
+    listaEl.innerHTML = totais.slice().reverse().map(t=>{
+      const m = estado.meses[t.chave];
+      const salarioTotal = rendaMesCombinada(t.chave);
+      const destaque = t.chave === mesMaisGasto.chave && t.total>0 ? 'destaque' : '';
+      return `<div class="hist-linha ${destaque}" data-ir-mes-hist="${t.chave}">
+        <span class="mes">${rotuloMes(t.chave)}</span>
+        <span class="valores">renda ${formatarMoedaCurta(salarioTotal)}<b>${formatarMoeda(t.total)}</b></span>
+      </div>`;
+    }).join("");
+
+    document.querySelectorAll('[data-ir-mes-hist]').forEach(linha=>{
+      linha.onclick = ()=>{
+        estado.mesAtual = linha.dataset.irMesHist;
+        obterMes(estado.mesAtual);
+        atualizarCabecalhoMes();
+        renderTudo();
+        salvar();
+        document.querySelector('nav.tabbar button[data-tab="resumo"]').click();
+      };
+    });
+  }
+
+  // ---------- reordenar cards do resumo ----------
+  function aplicarLayoutResumo(){
+    estado.layoutResumo.forEach((id, i)=>{
+      const el = document.querySelector(`#viewResumo [data-card-id="${id}"]`);
+      if(el) el.style.order = i;
+    });
+    document.querySelectorAll('.card-reorder').forEach(grupo=>{
+      const id = grupo.dataset.reorder;
+      const idx = estado.layoutResumo.indexOf(id);
+      grupo.querySelector('[data-mover="cima"]').disabled = idx <= 0;
+      grupo.querySelector('[data-mover="baixo"]').disabled = idx >= estado.layoutResumo.length-1;
+    });
+  }
+  document.querySelectorAll('.card-reorder button').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const grupo = e.currentTarget.closest('.card-reorder');
+      const id = grupo.dataset.reorder;
+      const dir = e.currentTarget.dataset.mover;
+      const idx = estado.layoutResumo.indexOf(id);
+      const novoIdx = dir === 'cima' ? idx-1 : idx+1;
+      if(novoIdx<0 || novoIdx>=estado.layoutResumo.length) return;
+      [estado.layoutResumo[idx], estado.layoutResumo[novoIdx]] = [estado.layoutResumo[novoIdx], estado.layoutResumo[idx]];
+      aplicarLayoutResumo();
+      salvar();
+    });
+  });
+
+  // ---------- pills de tipo de gráfico ----------
+  document.querySelectorAll('[data-comparativo-tipo]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      estado.graficoComparativoTipo = btn.dataset.comparativoTipo;
+      renderResumo();
+      salvar();
+    });
+  });
+  document.querySelectorAll('[data-categorias-tipo]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      estado.graficoCategoriasTipo = btn.dataset.categoriasTipo;
+      renderResumo();
+      salvar();
+    });
+  });
+  document.querySelectorAll('[data-historico-tipo]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      estado.graficoHistoricoTipo = btn.dataset.historicoTipo;
+      renderHistorico();
+      marcarPillsAtivas();
+      salvar();
+    });
+  });
+
+  // ---------- eventos dinâmicos (abas de pessoa) ----------
+  function ligarEventosDinamicos(){
+    document.querySelectorAll('.pessoa-nome-input').forEach(inp=>{
+      inp.oninput = e=>{
+        const chave = e.target.dataset.pessoaNome;
+        estado.nomes[chave] = e.target.value || estado.nomes[chave];
+        atualizarRotulosNomes();
+        document.querySelector(`#view${chave==='p1'?'P1':'P2'} .selo`).textContent = (e.target.value||'?').charAt(0).toUpperCase();
+        document.getElementById('resumoNome'+(chave==='p1'?'P1':'P2')).textContent = e.target.value;
+        document.getElementById('seloResumo'+(chave==='p1'?'P1':'P2')).textContent = (e.target.value||'?').charAt(0).toUpperCase();
+        salvar();
+      };
+    });
+
+    document.querySelectorAll('.input-salario').forEach(inp=>{
+      inp.oninput = e=>{ dadosPessoa(e.target.dataset.pessoa).salario = parseFloat(e.target.value)||0; renderResumo(); salvar(); };
+    });
+    document.querySelectorAll('.input-renda-extra').forEach(inp=>{
+      inp.oninput = e=>{ dadosPessoa(e.target.dataset.pessoa).rendaExtra = parseFloat(e.target.value)||0; renderResumo(); salvar(); };
+    });
+
+    document.querySelectorAll('.valor-input, .categoria-desc-input').forEach(inp=>{
+      inp.oninput = e=>{
+        const {pessoa, idx, campo} = e.target.dataset;
+        const item = dadosPessoa(pessoa).gastos[idx];
+        if(campo === 'valor') item.valor = parseFloat(e.target.value)||0;
+        else item.descricao = e.target.value;
+
+        const nomeView = pessoa === 'p1' ? 'P1' : 'P2';
+        const totalEl = document.querySelector(`#view${nomeView} .total-valor`);
+        if(totalEl) totalEl.textContent = formatarMoeda(totalPessoa(dadosPessoa(pessoa)));
+        if(campo==='valor'){ renderResumo(); atualizarAvisoLinha(pessoa, idx); }
+        salvar();
+      };
+    });
+
+    document.querySelectorAll('.input-limite').forEach(inp=>{
+      inp.oninput = e=>{
+        const {pessoa, idx} = e.target.dataset;
+        dadosPessoa(pessoa).gastos[idx].limite = parseFloat(e.target.value)||0;
+        atualizarAvisoLinha(pessoa, idx);
+        salvar();
+      };
+    });
+
+    document.querySelectorAll('.input-parcela').forEach(inp=>{
+      inp.oninput = e=>{
+        const {pessoa, idx} = e.target.dataset;
+        dadosPessoa(pessoa).gastos[idx].parcela = e.target.value;
+        atualizarBadgeParcela(pessoa, idx);
+        salvar();
+      };
+    });
+
+    document.querySelectorAll('.input-fixo').forEach(chk=>{
+      chk.onchange = e=>{
+        const {pessoa, idx} = e.target.dataset;
+        const item = dadosPessoa(pessoa).gastos[idx];
+        item.fixo = e.target.checked;
+        const badge = document.getElementById(`badge-fixo-${pessoa}-${idx}`);
+        if(badge) badge.classList.toggle('oculto', !item.fixo);
+        salvar();
+      };
+    });
+
+    document.querySelectorAll('.link-mais-opcoes').forEach(btn=>{
+      btn.onclick = e=>{
+        const id = e.currentTarget.dataset.toggleOpcoes;
+        const el = document.getElementById('opcoes-'+id);
+        el.classList.toggle('oculto');
+        e.currentTarget.textContent = el.classList.contains('oculto') ? 'mais opções' : 'menos opções';
+      };
+    });
+
+    document.querySelectorAll('.btn-remover').forEach(btn=>{
+      btn.onclick = e=>{
+        const {pessoa, idx} = e.currentTarget.dataset;
+        const item = dadosPessoa(pessoa).gastos[idx];
+        pedirConfirmacao(`Remover a categoria "${item.categoria}"?`, ()=>{
+          registrarAtividade(pessoa, 'removeu', item);
+          dadosPessoa(pessoa).gastos.splice(idx,1);
+          renderTudo();
+          salvar();
+        });
+      };
+    });
+
+    document.querySelectorAll('[data-abrir-form]').forEach(btn=>{
+      btn.onclick = e=>{
+        document.getElementById('form-'+e.currentTarget.dataset.abrirForm).classList.add('aberto');
+        e.currentTarget.classList.add('oculto');
+      };
+    });
+
+    document.querySelectorAll('[data-cancelar-form]').forEach(btn=>{
+      btn.onclick = e=>{
+        const chave = e.currentTarget.dataset.cancelarForm;
+        document.getElementById('form-'+chave).classList.remove('aberto');
+        document.querySelector(`[data-abrir-form="${chave}"]`).classList.remove('oculto');
+      };
+    });
+
+    document.querySelectorAll('[data-pagamento-btn]').forEach(btn=>{
+      btn.onclick = e=>{
+        const alvo = e.currentTarget;
+        const chave = alvo.dataset.pagamentoBtn;
+        const valor = alvo.dataset.pagamentoValor;
+        document.querySelectorAll(`[data-pagamento-btn="${chave}"]`).forEach(b=> b.classList.toggle('ativa', b===alvo));
+        const hidden = document.getElementById('novoPagamento-'+chave);
+        if(hidden) hidden.value = valor;
+        const campo = document.getElementById('campoParcelas-'+chave);
+        if(campo) campo.classList.toggle('oculto', valor !== 'credito');
+        if(valor === 'credito') document.getElementById('novoParcelas-'+chave)?.focus();
+      };
+    });
+
+    document.querySelectorAll('[data-salvar-form]').forEach(btn=>{
+      btn.onclick = e=>{
+        const chave = e.currentTarget.dataset.salvarForm;
+        const cat = document.getElementById('novaCategoria-'+chave).value.trim();
+        const desc = document.getElementById('novaDescricao-'+chave).value.trim();
+        const val = parseFloat(document.getElementById('novoValor-'+chave).value) || 0;
+        const tipoGasto = document.getElementById('novoTipoGasto-'+chave)?.value || 'mes';
+        const pagamento = document.getElementById('novoPagamento-'+chave)?.value || 'dinheiro';
+        const quantidadeInformada = parseInt(document.getElementById('novoParcelas-'+chave)?.value,10)||1;
+        // gasto fixo se repete todo mês sozinho, então nunca é parcelado em várias vezes
+        const quantidade = (pagamento === 'credito' && tipoGasto !== 'fixo') ? Math.max(1,quantidadeInformada) : 1;
+        if(!cat){ document.getElementById('novaCategoria-'+chave).focus(); return; }
+        if(val <= 0){ document.getElementById('novoValor-'+chave).focus(); return; }
+        if(pagamento === 'credito' && quantidade < 1){ document.getElementById('novoParcelas-'+chave).focus(); return; }
+
+        const valorParcela = Math.round((val/quantidade)*100)/100;
+        for(let n=0; n<quantidade; n++){
+          const mes = deslocarMes(estado.mesAtual,n);
+          const valorAtual = n === quantidade-1 ? Math.round((val - valorParcela*(quantidade-1))*100)/100 : valorParcela;
+          const pessoaMes = obterMes(mes)[chave];
+          const itemParcela = {
+            categoria:cat,
+            descricao:desc,
+            valor:valorAtual,
+            limite:0,
+            parcela:quantidade > 1 ? `${n+1}/${quantidade}` : '',
+            fixo:tipoGasto === 'fixo',
+            pagamento:pagamento,
+            fixoId:tipoGasto === 'fixo' ? 'fixo-'+Date.now()+Math.random().toString(16).slice(2) : ''
+          };
+          const linhaVazia = pessoaMes.gastos.find(item=>!item.fixo && !item.parcela && !item.pagamento && Number(item.valor)===0 && item.categoria===cat && (item.descricao||'')===desc);
+          if(linhaVazia) Object.assign(linhaVazia,itemParcela);
+          else pessoaMes.gastos.push(itemParcela);
+          if(n===0 && itemParcela.fixo) propagarGastoFixo(chave,itemParcela);
+        }
+        registrarAtividade(chave, 'adicionou', {categoria:cat, descricao:desc, valor:val});
+        renderTudo();
+        salvar();
+      };
+    });
+
+    ligarEventosMetas();
+  }
+
+  // ---------- abas + troca de tema por aba ----------
+  document.querySelectorAll('nav.tabbar button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('nav.tabbar button').forEach(b=>b.classList.remove('ativo'));
+      btn.classList.add('ativo');
+      document.querySelectorAll('main > div').forEach(v=>v.classList.add('oculto'));
+      const alvo = btn.dataset.tab;
+      abaAtiva = alvo;
+      const mapaId = { resumo:'viewResumo', p1:'viewP1', p2:'viewP2', metas:'viewMetas', historico:'viewHistorico' };
+      const viewEl = document.getElementById(mapaId[alvo]);
+      viewEl.classList.remove('oculto');
+      viewEl.style.animation = 'none';
+      void viewEl.offsetWidth;
+      viewEl.style.animation = '';
+
+      aplicarTemaAba(alvo);
+    });
+  });
+
+  // ---------- backup (exportar / importar) ----------
+  
+  document.getElementById('fecharModalBackup').onclick = ()=> document.getElementById('modalBackup').classList.add('oculto');
+  function renderBackupHistorico(){
+    const el=document.getElementById('backupHistorico'); if(!el) return;
+    const logs=estado.historicoBackup||[];
+    el.innerHTML='<h4>Atividade recente</h4>' + (logs.length ? logs.map(x=>`<div class="backup-log-item"><strong>${x.tipo}</strong><span>${rotuloDataHora(x.quando)}<br>${x.destino}</span></div>`).join('') : '<p class="mini-info">Nenhuma importação ou exportação registrada ainda.</p>');
+  }
+  function baixarBackup(destino='arquivo do aparelho'){
+    const dataStr = JSON.stringify(estado, null, 2);
+    const blob = new Blob([dataStr], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'controle-de-gastos-backup.json';
+    document.body.appendChild(a);
+    a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    registrarBackup('Exportação', destino); salvar(); renderBackupHistorico();
+  }
+  document.getElementById('btnBaixarBackup').addEventListener('click', ()=> baixarBackup());
+  document.getElementById('btnRestaurarBackup').addEventListener('click', ()=>{
+    document.getElementById('inputImportar').click();
+  });
+  document.getElementById('inputImportar').addEventListener('change', e=>{
+    const arquivo = e.target.files[0];
+    if(!arquivo) return;
+    const leitor = new FileReader();
+    leitor.onload = ev=>{
+      try{
+        estado = migrar(JSON.parse(ev.target.result));
+        registrarBackup('Importação', `arquivo: ${arquivo.name}`);
+        obterMes(estado.mesAtual);
+        aplicarTema();
+        atualizarRotulosNomes();
+        atualizarCabecalhoMes();
+        renderTudo();
+        salvar();
+        atualizarPaleta(); renderBackupHistorico();
+        document.getElementById('modalBackup').classList.add('oculto');
+      }catch(err){
+        alert('Não consegui ler esse arquivo. Confira se é um backup válido.');
+      }
+    };
+    leitor.readAsText(arquivo);
+    e.target.value = '';
+  });
+
+  // ---------- compartilhar resumo do mes ----------
+  function gerarResumoTexto(){
+    const p1=dadosPessoa('p1'), p2=dadosPessoa('p2');
+    const gastosP1=totalPessoa(p1), gastosP2=totalPessoa(p2);
+    const objetivoP1=investimentoPessoaMes('p1'), objetivoP2=investimentoPessoaMes('p2');
+    const totalP1=gastosP1+objetivoP1, totalP2=gastosP2+objetivoP2;
+    const salP1=rendaPessoa(p1), salP2=rendaPessoa(p2);
+    const sobra=(salP1-totalP1)+(salP2-totalP2);
+    const itens = listaItensCategorias(p1,p2).sort((a,b)=>b.valor-a.valor).slice(0,5);
+    let txt = `Resumo de ${rotuloMes(estado.mesAtual)}\n\n`;
+    txt += `${estado.nomes.p1}: ${formatarMoeda(totalP1)} de ${formatarMoeda(salP1)}\n`;
+    txt += `${estado.nomes.p2}: ${formatarMoeda(totalP2)} de ${formatarMoeda(salP2)}\n\n`;
+    txt += `Objetivos — ${estado.nomes.p1}: ${formatarMoeda(objetivoP1)} | ${estado.nomes.p2}: ${formatarMoeda(objetivoP2)}\n`;
+    txt += `Sobra combinada: ${formatarMoeda(sobra)}\n`;
+    if(itens.length){
+      txt += `\nMaiores gastos:\n`;
+      itens.forEach(it=>{ txt += `- ${it.nome}: ${formatarMoeda(it.valor)}\n`; });
+    }
+    return txt;
+  }
+  document.getElementById('btnCompartilharResumo').addEventListener('click', ()=>{
+    document.getElementById('resumoTextoArea').value = gerarResumoTexto();
+    document.getElementById('btnCompartilharNativo').classList.toggle('oculto', !navigator.share);
+    document.getElementById('modalCompartilhar').classList.remove('oculto');
+  });
+  document.getElementById('fecharModalCompartilhar').onclick = ()=> document.getElementById('modalCompartilhar').classList.add('oculto');
+  document.getElementById('btnCopiarResumo').addEventListener('click', async ()=>{
+    const texto = document.getElementById('resumoTextoArea').value;
+    try{
+      await navigator.clipboard.writeText(texto);
+    }catch(e){
+      const ta = document.getElementById('resumoTextoArea');
+      ta.select();
+      try{ document.execCommand('copy'); }catch(e2){}
+    }
+    const btn = document.getElementById('btnCopiarResumo');
+    const original = btn.textContent;
+    btn.textContent = 'Copiado!';
+    setTimeout(()=>{ btn.textContent = original; }, 1500);
+  });
+  document.getElementById('btnCompartilharNativo').addEventListener('click', ()=>{
+    const texto = document.getElementById('resumoTextoArea').value;
+    if(navigator.share){ navigator.share({title:'Resumo do mês', text:texto}).catch(()=>{}); }
+  });
+
+  // ---------- menu lateral, paleta e compartilhamento do app ----------
+  function abrirFecharDrawer(aberto){ document.getElementById('drawer').classList.toggle('aberto',aberto); document.getElementById('drawerBackdrop').classList.toggle('aberto',aberto); }
+  document.getElementById('abrirDrawer').onclick=()=>abrirFecharDrawer(true);
+  document.getElementById('fecharDrawer').onclick=()=>abrirFecharDrawer(false);
+  document.getElementById('drawerBackdrop').onclick=()=>abrirFecharDrawer(false);
+  document.querySelectorAll('[data-drawer-tab]').forEach(b=>b.onclick=()=>{ const tab=document.querySelector(`nav.tabbar button[data-tab="${b.dataset.drawerTab}"]`); if(tab) tab.click(); abrirFecharDrawer(false); });
+  document.getElementById('drawerBackup').onclick=()=>{ abrirFecharDrawer(false); renderBackupHistorico(); document.getElementById('modalBackup').classList.remove('oculto'); };
+  document.getElementById('drawerSync').onclick=()=>{ abrirFecharDrawer(false); renderModalSync(); document.getElementById('modalSync').classList.remove('oculto'); };
+  document.getElementById('drawerAtividades').onclick=()=>{ abrirFecharDrawer(false); renderAtividades(); document.getElementById('modalAtividades').classList.remove('oculto'); };
+  document.getElementById('fecharModalAtividades').onclick = ()=> document.getElementById('modalAtividades').classList.add('oculto');
+  document.getElementById('fecharModalSync').onclick = ()=> document.getElementById('modalSync').classList.add('oculto');
+  document.getElementById('btnCriarCodigo').onclick = async ()=>{
+    if(!dbSync){ atualizarStatusSync('erro','Sem conexão com o servidor de sincronização agora.'); return; }
+    const btn = document.getElementById('btnCriarCodigo');
+    btn.disabled = true; atualizarStatusSync('', 'Gerando código...');
+    try{
+      const codigo = gerarCodigoSync();
+      await dbSync.collection('casais').doc(codigo).set({ estado: estado, atualizadoEm: firebase.firestore.FieldValue.serverTimestamp() });
+      conectarComoGrupo(codigo);
+      renderModalSync();
+      atualizarStatusSync('ok','Código criado! Envie para o seu par.');
+    }catch(e){ atualizarStatusSync('erro','Não deu pra gerar o código. Tente de novo.'); }
+    btn.disabled = false;
+  };
+  document.getElementById('btnEntrarCodigo').onclick = async ()=>{
+    if(!dbSync){ atualizarStatusSync('erro','Sem conexão com o servidor de sincronização agora.'); return; }
+    const codigo = document.getElementById('inputCodigoSync').value.trim().toUpperCase();
+    if(!codigo){ atualizarStatusSync('erro','Digite o código primeiro.'); return; }
+    atualizarStatusSync('', 'Procurando código...');
+    try{
+      const doc = await dbSync.collection('casais').doc(codigo).get();
+      if(!doc.exists){ atualizarStatusSync('erro','Código não encontrado. Confira e tente de novo.'); return; }
+      if(!confirm('Isso vai substituir os dados deste aparelho pelos dados compartilhados da dupla. Continuar?')) return;
+      const dados = doc.data();
+      if(dados && dados.estado) estado = migrar(dados.estado);
+      obterMes(estado.mesAtual);
+      conectarComoGrupo(codigo);
+      aplicarTema(); atualizarRotulosNomes(); atualizarCabecalhoMes(); atualizarPaleta(); renderTudo();
+      try{ localStorage.setItem('controle-de-gastos-estado', JSON.stringify(estado)); }catch(e){}
+      renderModalSync();
+      atualizarStatusSync('ok','Conectado! Agora vocês compartilham os mesmos dados.');
+    }catch(e){ atualizarStatusSync('erro','Não deu pra entrar com esse código. Tente de novo.'); }
+  };
+  document.getElementById('btnDesconectarSync').onclick = ()=>{
+    if(!confirm('Parar de sincronizar? Os dados de agora ficam salvos só neste aparelho, e as próximas mudanças não serão mais compartilhadas.')) return;
+    desconectarSync();
+    renderModalSync();
+  };
+  document.querySelectorAll('[data-paleta]').forEach(b=>b.onclick=()=>{ estado.paleta=b.dataset.paleta; atualizarPaleta(); salvar(); });
+  function compartilharApp(){
+    const url=location.href;
+    const texto='Baixe/abra meu app de controle de gastos: '+url;
+    if(navigator.share) navigator.share({title:'Controle de Gastos',text:texto,url}).catch(()=>{});
+    else { navigator.clipboard?.writeText(url); alert('Link do app copiado. Envie esse link para a outra pessoa.'); }
+  }
+  document.getElementById('drawerShare').onclick=()=>{ abrirFecharDrawer(false); compartilharApp(); };
+  document.querySelectorAll('[data-drawer-name]').forEach(el=>el.textContent=estado?.nomes?.[el.dataset.drawerName]||el.textContent);
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', ()=>{
+      navigator.serviceWorker.register('sw.js').catch(()=>{});
+    });
+  }
+
+  carregar();
+})();
+</script>
+
+</body>
+</html>

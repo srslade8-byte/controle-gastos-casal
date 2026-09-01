@@ -1,0 +1,15 @@
+{
+  "name": "Controle de Gastos",
+  "short_name": "Gastos",
+  "description": "Controle de gastos com renda extra, objetivos, backup e histórico.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F0F7F1",
+  "theme_color": "#212120",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
