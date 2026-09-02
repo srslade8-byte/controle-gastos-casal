@@ -397,16 +397,23 @@
 
   .btn-remover{
     border:none;
-    background:none;
+    background:var(--paper-deep);
     color:var(--ink-soft);
-    opacity:.5;
-    font-size:16px;
+    opacity:1;
+    font-size:15px;
     line-height:1;
-    padding:5px;
+    width:32px;
+    height:32px;
+    min-width:32px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
     cursor:pointer;
     border-radius:50%;
+    flex:none;
+    transition:background .15s ease,color .15s ease,transform .1s ease;
   }
-  .btn-remover:active{color:var(--red);opacity:1;background:var(--red-soft);}
+  .btn-remover:active{color:#fff;background:var(--red);transform:scale(.92);}
 
   .total-row{
     display:flex;
@@ -950,7 +957,9 @@
   .backup-log-item{display:flex;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:11px;color:var(--ink-soft);}
   .backup-log-item strong{color:var(--ink);font-size:12px;}
   .categoria-icone{width:26px;height:26px;border-radius:9px;background:color-mix(in srgb, var(--accent) 10%, var(--paper-deep));display:inline-flex;align-items:center;justify-content:center;font-size:15px;flex:none;}
-  .badge-pagamento{font-size:10.5px;font-weight:700;margin-left:1px;display:inline-flex;align-items:center;gap:3px;background:var(--paper-deep);color:var(--ink-soft);padding:3px 8px 3px 6px;border-radius:8px;}
+  .badge-pagamento{font-size:10.5px;font-weight:700;margin-left:1px;display:inline-flex;align-items:center;gap:3px;background:var(--paper-deep);color:var(--ink-soft);padding:3px 8px 3px 6px;border-radius:8px;border:none;font-family:inherit;cursor:pointer;}
+  .badge-pagamento.vazio{opacity:.5;}
+  .badge-pagamento:active{transform:scale(.95);}
   .badge-pagamento .emoji{font-size:12px;}
   .badge-pagamento.pix{background:#DCF3EE;color:#0d7d68;}
   .badge-pagamento.debito{background:#E3ECF8;color:#3f5b7d;}
@@ -1169,7 +1178,7 @@
           <label>Nome do objetivo</label>
           <input type="text" id="novaMetaNome" placeholder="Ex: Geladeira, Casa própria...">
           <label>Valor total do objetivo</label>
-          <input type="number" inputmode="decimal" id="novaMetaValor" placeholder="0,00">
+          <input type="text" inputmode="decimal" id="novaMetaValor" placeholder="0,00">
           <div class="form-botoes">
             <button class="btn-cancelar" id="cancelarNovaMeta">Cancelar</button>
             <button class="btn-salvar" id="salvarNovaMeta">Criar objetivo</button>
@@ -1334,6 +1343,30 @@
   </div>
 </div>
 
+<div class="confirm-overlay oculto" id="modalEditarPagamento">
+  <div class="confirm-box">
+    <h3>Forma de pagamento</h3>
+    <p style="font-size:13px;color:var(--ink-soft);margin:0 0 10px;" id="editarPagamentoCategoria"></p>
+    <div class="pagamento-grupo" id="editarPagamentoGrupo">
+      <button type="button" class="pagamento-opcao" data-editar-valor="dinheiro"><span class="pagamento-emoji">💵</span><span>Dinheiro</span></button>
+      <button type="button" class="pagamento-opcao" data-editar-valor="pix"><span class="pagamento-emoji">🔑</span><span>Pix</span></button>
+      <button type="button" class="pagamento-opcao" data-editar-valor="debito"><span class="pagamento-emoji">💳</span><span>Débito</span></button>
+      <button type="button" class="pagamento-opcao" data-editar-valor="credito"><span class="pagamento-emoji">💳</span><span>Crédito</span></button>
+      <button type="button" class="pagamento-opcao" data-editar-valor="objetivo"><span class="pagamento-emoji">🎯</span><span>Objetivo</span></button>
+    </div>
+    <div class="campo-parcelas oculto" id="editarObjetivoCampo">
+      <label>Retirar de qual objetivo?</label>
+      <select id="editarObjetivoId"></select>
+      <div class="form-erro oculto" id="editarObjetivoErro"></div>
+    </div>
+    <div class="confirm-botoes">
+      <button id="fecharModalEditarPagamento" style="flex:1;">Cancelar</button>
+      <button id="salvarEditarPagamento" class="btn-salvar" style="flex:1;">Salvar</button>
+    </div>
+  </div>
+</div>
+
+
 
 <script>
 (function(){
@@ -1387,6 +1420,7 @@
   let salvarTimeout = null;
   let acaoConfirmar = null;
   let abaAtiva = "resumo";
+  let editandoPagamento = null;
   let metasExpandidas = new Set();
 
   // ---------- sincronização com parceiro(a) (Firebase Firestore) ----------
@@ -1568,6 +1602,31 @@
   function formatarMoeda(v){
     v = Number(v) || 0;
     return v.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+  }
+  // ---------- entrada de valores em reais (aceita vírgula, formata bonitinho ao sair do campo) ----------
+  function paraNumero(str){
+    if(typeof str === 'number') return str;
+    if(!str) return 0;
+    let s = String(str).trim().replace(/[^\d,.-]/g,'');
+    if(s.includes(',')){ s = s.replace(/\./g,'').replace(',', '.'); }
+    return parseFloat(s) || 0;
+  }
+  function formatarValorInput(n){
+    const num = Number(n)||0;
+    if(!num) return '';
+    return num.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+  function saneandoDigitacaoMoeda(str){
+    let s = String(str).replace(/[^\d,]/g,'');
+    const partes = s.split(',');
+    if(partes.length > 2) s = partes[0] + ',' + partes.slice(1).join('');
+    const idx = s.indexOf(',');
+    if(idx !== -1 && s.length - idx - 1 > 2) s = s.slice(0, idx+3);
+    return s;
+  }
+  function ligarCampoMoeda(inp){
+    inp.addEventListener('blur', ()=>{ inp.value = formatarValorInput(paraNumero(inp.value)); });
+    inp.addEventListener('focus', ()=>{ setTimeout(()=>inp.select(),0); });
   }
   function formatarMoedaCurta(v){
     v = Number(v) || 0;
@@ -1903,8 +1962,8 @@
       </div>
       <p class="card-titulo" style="margin-top:2px;">Salário do mês</p>
       <p class="card-sub">Quanto ${nome} recebeu esse mês.</p>
-      <div class="salario-row"><span class="prefixo">R$</span><input type="number" inputmode="decimal" class="input-salario" data-pessoa="${chave}" value="${p.salario || ''}" placeholder="0,00"></div>
-      <div class="renda-extra-row"><label>Renda extra / valor além do salário</label><input type="number" inputmode="decimal" class="input-renda-extra" data-pessoa="${chave}" value="${p.rendaExtra || ''}" placeholder="0,00"></div>
+      <div class="salario-row"><span class="prefixo">R$</span><input type="text" inputmode="decimal" class="input-salario" data-pessoa="${chave}" value="${formatarValorInput(p.salario)}" placeholder="0,00"></div>
+      <div class="renda-extra-row"><label>Renda extra / valor além do salário</label><input type="text" inputmode="decimal" class="input-renda-extra" data-pessoa="${chave}" value="${formatarValorInput(p.rendaExtra)}" placeholder="0,00"></div>
     </section>`;
 
     html += `<section class="card">
@@ -1927,7 +1986,7 @@
             <span class="categoria-icone" title="${item.categoria}">${iconeCategoria(item.categoria)}</span><input type="text" class="categoria-nome-input" data-pessoa="${chave}" data-idx="${i}" data-campo="categoria" value="${item.categoria}">
             <span class="badge-fixo ${item.fixo?'':'oculto'}" id="badge-fixo-${chave}-${i}" title="Repete todo mês">📌</span>
             <span class="badge-parcela ${infoP?'':'oculto'} ${infoP&&infoP.ultima?'ultima':''}" id="badge-parcela-${chave}-${i}">${infoP?infoP.texto:''}</span>
-            <span class="badge-pagamento ${infoPg?infoPg.classe:''} ${infoPg?'':'oculto'}" title="${infoPg?infoPg.titulo:''}"><span class="emoji">${infoPg?infoPg.emoji:''}</span>${infoPg?infoPg.texto:''}</span>
+            <span class="badge-pagamento-wrap"><button type="button" class="badge-pagamento ${infoPg?infoPg.classe:'vazio'}" data-editar-pagamento="${chave}" data-idx="${i}" title="Alterar forma de pagamento"><span class="emoji">${infoPg?infoPg.emoji:'💰'}</span>${infoPg?infoPg.texto:'Pagamento'}</button></span>
           </div>
           <input class="categoria-desc-input" data-pessoa="${chave}" data-idx="${i}" data-campo="descricao" placeholder="adicionar descrição..." value="${item.descricao||''}">
           <div class="aviso-limite" id="aviso-${chave}-${i}">${acimaInicial ? ('Passou o limite de '+formatarMoeda(item.limite)) : ''}</div>
@@ -1935,7 +1994,7 @@
           <div class="opcoes-extra oculto" id="opcoes-${chave}-${i}">
             <div class="opcoes-extra-campo">
               <label>Limite mensal (opcional)</label>
-              <input type="number" inputmode="decimal" class="input-limite" data-pessoa="${chave}" data-idx="${i}" value="${item.limite||''}" placeholder="0,00">
+              <input type="text" inputmode="decimal" class="input-limite" data-pessoa="${chave}" data-idx="${i}" value="${formatarValorInput(item.limite)}" placeholder="0,00">
             </div>
             <div class="opcoes-extra-campo">
               <label>Parcela (ex: 3/10)</label>
@@ -1949,7 +2008,7 @@
         </div>
         <div class="valor-input-wrap">
           <span>R$</span>
-          <input type="number" inputmode="decimal" class="valor-input" data-pessoa="${chave}" data-idx="${i}" data-campo="valor" value="${item.valor||''}" placeholder="0,00">
+          <input type="text" inputmode="decimal" class="valor-input" data-pessoa="${chave}" data-idx="${i}" data-campo="valor" value="${formatarValorInput(item.valor)}" placeholder="0,00">
         </div>
         <button class="btn-remover" data-pessoa="${chave}" data-idx="${i}" title="Remover categoria">✕</button>
       </div>`;
@@ -1969,7 +2028,7 @@
         <label>Descrição (opcional)</label>
         <input type="text" id="novaDescricao-${chave}" placeholder="Ex: aniversário da mãe">
         <label>Valor</label>
-        <input type="number" inputmode="decimal" id="novoValor-${chave}" placeholder="0,00">
+        <input type="text" inputmode="decimal" id="novoValor-${chave}" placeholder="0,00">
         <label>Tipo de gasto</label>
         <select id="novoTipoGasto-${chave}" class="select-pagamento" data-tipo-gasto-select="${chave}">
           <option value="mes">Somente neste mês</option>
@@ -2276,20 +2335,20 @@
           <div class="meta-campo-row">
             <div class="meta-campo">
               <label>Valor do objetivo</label>
-              <div class="caixa"><span>R$</span><input type="number" inputmode="decimal" data-meta-id="${m.id}" data-meta-campo="valorObjetivo" value="${m.valorObjetivo||''}"></div>
+              <div class="caixa"><span>R$</span><input type="text" inputmode="decimal" data-meta-id="${m.id}" data-meta-campo="valorObjetivo" value="${formatarValorInput(m.valorObjetivo)}"></div>
             </div>
             <div class="meta-campo">
               <label>Já guardado antes</label>
-              <div class="caixa"><span>R$</span><input type="number" inputmode="decimal" data-meta-id="${m.id}" data-meta-campo="saldoInicial" value="${saldoInicial||''}" placeholder="0,00"></div>
+              <div class="caixa"><span>R$</span><input type="text" inputmode="decimal" data-meta-id="${m.id}" data-meta-campo="saldoInicial" value="${formatarValorInput(saldoInicial)}" placeholder="0,00"></div>
             </div>
           </div>
           <div class="meta-campo meta-campo-wide">
             <label>Investimento no objetivo deste mês — Pessoa 1</label>
-            <div class="caixa"><span>R$</span><input type="number" inputmode="decimal" data-meta-id="${m.id}" data-meta-campo="contribuicaoMes" data-meta-pessoa="p1" value="${contribP1||''}" placeholder="0,00"></div>
+            <div class="caixa"><span>R$</span><input type="text" inputmode="decimal" data-meta-id="${m.id}" data-meta-campo="contribuicaoMes" data-meta-pessoa="p1" value="${formatarValorInput(contribP1)}" placeholder="0,00"></div>
           </div>
           <div class="meta-campo meta-campo-wide">
             <label>Investimento no objetivo deste mês — Pessoa 2</label>
-            <div class="caixa"><span>R$</span><input type="number" inputmode="decimal" data-meta-id="${m.id}" data-meta-campo="contribuicaoMes" data-meta-pessoa="p2" value="${contribP2||''}" placeholder="0,00"></div>
+            <div class="caixa"><span>R$</span><input type="text" inputmode="decimal" data-meta-id="${m.id}" data-meta-campo="contribuicaoMes" data-meta-pessoa="p2" value="${formatarValorInput(contribP2)}" placeholder="0,00"></div>
           </div>
           <p class="mini-info">O valor deste mês será somado automaticamente ao que já está guardado.</p>
           <p class="meta-historico-titulo">Guardado por mês</p>
@@ -2335,28 +2394,34 @@
       };
     });
     document.querySelectorAll('[data-meta-campo="valorObjetivo"]').forEach(inp=>{
+      ligarCampoMoeda(inp);
       inp.oninput = e=>{
+        e.target.value = saneandoDigitacaoMoeda(e.target.value);
         const meta = estado.metas.find(m=>m.id===e.target.dataset.metaId);
-        meta.valorObjetivo = parseFloat(e.target.value)||0;
+        meta.valorObjetivo = paraNumero(e.target.value);
         atualizarVisualMeta(meta.id); renderMetasResumo(); renderResumo();
         salvar();
       };
     });
     document.querySelectorAll('[data-meta-campo="saldoInicial"]').forEach(inp=>{
+      ligarCampoMoeda(inp);
       inp.oninput = e=>{
+        e.target.value = saneandoDigitacaoMoeda(e.target.value);
         const meta = estado.metas.find(m=>m.id===e.target.dataset.metaId);
-        meta.saldoInicial = parseFloat(e.target.value)||0;
+        meta.saldoInicial = paraNumero(e.target.value);
         atualizarVisualMeta(meta.id); renderMetasResumo(); renderResumo();
         salvar();
       };
     });
     document.querySelectorAll('[data-meta-campo="contribuicaoMes"]').forEach(inp=>{
+      ligarCampoMoeda(inp);
       inp.oninput = e=>{
+        e.target.value = saneandoDigitacaoMoeda(e.target.value);
         const meta = estado.metas.find(m=>m.id===e.target.dataset.metaId);
         if(!meta.contribuicoes) meta.contribuicoes = {};
         const atual = meta.contribuicoes[estado.mesAtual];
         const valores = atual && typeof atual === 'object' ? atual : {p1:Number(atual)||0,p2:0};
-        valores[e.target.dataset.metaPessoa] = parseFloat(e.target.value)||0;
+        valores[e.target.dataset.metaPessoa] = paraNumero(e.target.value);
         meta.contribuicoes[estado.mesAtual] = {p1:Number(valores.p1)||0,p2:Number(valores.p2)||0};
         atualizarVisualMeta(meta.id); renderMetasResumo(); renderResumo();
         salvar();
@@ -2383,9 +2448,11 @@
     document.getElementById('formNovaMeta').classList.remove('aberto');
     document.getElementById('btnAbrirNovaMeta').classList.remove('oculto');
   });
+  document.getElementById('novaMetaValor').addEventListener('input', e=>{ e.target.value = saneandoDigitacaoMoeda(e.target.value); });
+  ligarCampoMoeda(document.getElementById('novaMetaValor'));
   document.getElementById('salvarNovaMeta').addEventListener('click', ()=>{
     const nome = document.getElementById('novaMetaNome').value.trim();
-    const valor = parseFloat(document.getElementById('novaMetaValor').value)||0;
+    const valor = paraNumero(document.getElementById('novaMetaValor').value);
     if(!nome){ document.getElementById('novaMetaNome').focus(); return; }
     estado.metas.push({ id: 'm'+Date.now()+Math.random().toString(16).slice(2), nome, valorObjetivo: valor, saldoInicial: 0, contribuicoes:{}, retiradas:[] });
     document.getElementById('novaMetaNome').value = "";
@@ -2551,17 +2618,20 @@
     });
 
     document.querySelectorAll('.input-salario').forEach(inp=>{
-      inp.oninput = e=>{ dadosPessoa(e.target.dataset.pessoa).salario = parseFloat(e.target.value)||0; renderResumo(); salvar(); };
+      ligarCampoMoeda(inp);
+      inp.oninput = e=>{ e.target.value = saneandoDigitacaoMoeda(e.target.value); dadosPessoa(e.target.dataset.pessoa).salario = paraNumero(e.target.value); renderResumo(); salvar(); };
     });
     document.querySelectorAll('.input-renda-extra').forEach(inp=>{
-      inp.oninput = e=>{ dadosPessoa(e.target.dataset.pessoa).rendaExtra = parseFloat(e.target.value)||0; renderResumo(); salvar(); };
+      ligarCampoMoeda(inp);
+      inp.oninput = e=>{ e.target.value = saneandoDigitacaoMoeda(e.target.value); dadosPessoa(e.target.dataset.pessoa).rendaExtra = paraNumero(e.target.value); renderResumo(); salvar(); };
     });
 
     document.querySelectorAll('.valor-input, .categoria-desc-input').forEach(inp=>{
+      if(inp.classList.contains('valor-input')) ligarCampoMoeda(inp);
       inp.oninput = e=>{
         const {pessoa, idx, campo} = e.target.dataset;
         const item = dadosPessoa(pessoa).gastos[idx];
-        if(campo === 'valor') item.valor = parseFloat(e.target.value)||0;
+        if(campo === 'valor'){ e.target.value = saneandoDigitacaoMoeda(e.target.value); item.valor = paraNumero(e.target.value); }
         else item.descricao = e.target.value;
 
         const nomeView = pessoa === 'p1' ? 'P1' : 'P2';
@@ -2584,9 +2654,11 @@
     });
 
     document.querySelectorAll('.input-limite').forEach(inp=>{
+      ligarCampoMoeda(inp);
       inp.oninput = e=>{
         const {pessoa, idx} = e.target.dataset;
-        dadosPessoa(pessoa).gastos[idx].limite = parseFloat(e.target.value)||0;
+        e.target.value = saneandoDigitacaoMoeda(e.target.value);
+        dadosPessoa(pessoa).gastos[idx].limite = paraNumero(e.target.value);
         atualizarAvisoLinha(pessoa, idx);
         salvar();
       };
@@ -2599,6 +2671,11 @@
         atualizarBadgeParcela(pessoa, idx);
         salvar();
       };
+    });
+
+    document.querySelectorAll('input[id^="novoValor-"]').forEach(inp=>{
+      ligarCampoMoeda(inp);
+      inp.oninput = e=>{ e.target.value = saneandoDigitacaoMoeda(e.target.value); };
     });
 
     document.querySelectorAll('.input-fixo').forEach(chk=>{
@@ -2686,7 +2763,7 @@
         const chave = e.currentTarget.dataset.salvarForm;
         const cat = document.getElementById('novaCategoria-'+chave).value.trim();
         const desc = document.getElementById('novaDescricao-'+chave).value.trim();
-        const val = parseFloat(document.getElementById('novoValor-'+chave).value) || 0;
+        const val = paraNumero(document.getElementById('novoValor-'+chave).value);
         const tipoGasto = document.getElementById('novoTipoGasto-'+chave)?.value || 'mes';
         const pagamento = document.getElementById('novoPagamento-'+chave)?.value || 'dinheiro';
         const quantidadeInformada = parseInt(document.getElementById('novoParcelas-'+chave)?.value,10)||1;
@@ -2929,6 +3006,64 @@
   }
   document.getElementById('drawerShare').onclick=()=>{ abrirFecharDrawer(false); compartilharApp(); };
   document.querySelectorAll('[data-drawer-name]').forEach(el=>el.textContent=estado?.nomes?.[el.dataset.drawerName]||el.textContent);
+
+  // ---------- editar forma de pagamento de um gasto já existente ----------
+  document.querySelectorAll('#editarPagamentoGrupo .pagamento-opcao').forEach(btn=>{
+    btn.onclick = e=>{
+      document.querySelectorAll('#editarPagamentoGrupo .pagamento-opcao').forEach(b=>b.classList.toggle('ativa', b===e.currentTarget));
+      document.getElementById('editarObjetivoCampo').classList.toggle('oculto', e.currentTarget.dataset.editarValor !== 'objetivo');
+      document.getElementById('editarObjetivoErro').classList.add('oculto');
+    };
+  });
+  document.getElementById('fecharModalEditarPagamento').onclick = ()=>{
+    editandoPagamento = null;
+    document.getElementById('modalEditarPagamento').classList.add('oculto');
+  };
+  document.getElementById('salvarEditarPagamento').onclick = ()=>{
+    if(!editandoPagamento) return;
+    const {pessoa, idx} = editandoPagamento;
+    const item = dadosPessoa(pessoa).gastos[idx];
+    if(!item) return;
+    const ativo = document.querySelector('#editarPagamentoGrupo .pagamento-opcao.ativa');
+    const novoPagamento = ativo ? ativo.dataset.editarValor : 'dinheiro';
+    const erroEl = document.getElementById('editarObjetivoErro');
+    erroEl.classList.add('oculto'); erroEl.textContent = '';
+
+    function estornarRetiradaAtual(){
+      if(item.origemMeta && item.retiradaId){
+        const metaAntiga = (estado.metas||[]).find(m=>m.id===item.origemMeta);
+        if(metaAntiga && metaAntiga.retiradas) metaAntiga.retiradas = metaAntiga.retiradas.filter(r=>r.id!==item.retiradaId);
+      }
+    }
+
+    if(novoPagamento === 'objetivo'){
+      const metaId = document.getElementById('editarObjetivoId').value;
+      const meta = (estado.metas||[]).find(m=>m.id===metaId);
+      if(!meta){ erroEl.textContent = 'Escolha de qual objetivo o dinheiro vai sair.'; erroEl.classList.remove('oculto'); return; }
+      if(meta.id === item.origemMeta && item.retiradaId){
+        const r = (meta.retiradas||[]).find(x=>x.id===item.retiradaId);
+        if(r) r.valor = item.valor;
+      } else {
+        const disponivel = totalGuardadoMeta(meta);
+        if(item.valor > disponivel){ erroEl.textContent = `Esse objetivo só tem ${formatarMoeda(disponivel)} guardado.`; erroEl.classList.remove('oculto'); return; }
+        estornarRetiradaAtual();
+        const novoId = 'ret-'+Date.now()+Math.random().toString(16).slice(2);
+        if(!meta.retiradas) meta.retiradas = [];
+        meta.retiradas.push({ id: novoId, valor: item.valor, quando: new Date().toISOString(), descricao: item.descricao ? `${item.categoria} — ${item.descricao}` : item.categoria });
+        item.origemMeta = meta.id;
+        item.retiradaId = novoId;
+      }
+    } else {
+      estornarRetiradaAtual();
+      item.origemMeta = '';
+      item.retiradaId = '';
+    }
+    item.pagamento = novoPagamento;
+    editandoPagamento = null;
+    document.getElementById('modalEditarPagamento').classList.add('oculto');
+    renderTudo();
+    salvar();
+  };
 
   if('serviceWorker' in navigator){
     window.addEventListener('load', ()=>{
