@@ -266,13 +266,29 @@
   .ficha{border-top:1px solid var(--line);}
   .linha-gasto{
     display:grid;
-    grid-template-columns:1fr auto auto;
+    grid-template-columns:auto 1fr auto auto;
     align-items:center;
     padding:12px 0;
     border-bottom:1px dashed var(--line);
     gap:8px;
+    transition:opacity .2s ease;
   }
   .linha-gasto:last-child{border-bottom:none;}
+  .linha-gasto.paga{opacity:.55;}
+  .linha-gasto.paga .categoria-nome,
+  .linha-gasto.paga .categoria-desc-input{text-decoration:line-through;}
+  .btn-pago{
+    border:none;
+    background:none;
+    font-size:19px;
+    line-height:1;
+    padding:4px 2px;
+    cursor:pointer;
+    filter:grayscale(1);
+    opacity:.5;
+  }
+  .btn-pago.marcada{filter:none;opacity:1;}
+  .btn-pago:active{transform:scale(0.9);}
   .categoria-nome{
     font-size:14.5px;
     font-weight:500;
@@ -590,6 +606,11 @@
     width:100%;font-variant-numeric:tabular-nums;
   }
   .meta-campo input:focus{outline:none;}
+  .meta-card-header{cursor:pointer;user-select:none;}
+  .meta-header-topo{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;}
+  .meta-header-nome{font-family:'Fraunces',serif;font-weight:600;font-size:16px;color:var(--ink);}
+  .meta-header-seta{font-size:11px;color:var(--ink-soft);flex:none;}
+  .meta-detalhe{margin-top:16px;padding-top:14px;border-top:1px dashed var(--line);}
   .meta-progress-bg{height:14px;border-radius:8px;background:var(--paper-deep);overflow:hidden;margin-top:2px;}
   .meta-progress-fill{height:100%;border-radius:8px;background:var(--accent);transition:width .6s ease;}
   .meta-numeros{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-soft);margin-top:6px;}
@@ -1227,8 +1248,8 @@
 
   function dadosMesPadrao(){
     return {
-      p1: { salario:0, rendaExtra:0, investimentoObjetivo:0, gastos: CATEGORIAS_P1.map(c => ({ categoria:c, descricao:"", valor:0, limite:0, parcela:"", fixo:false, pagamento:"" })) },
-      p2: { salario:0, rendaExtra:0, investimentoObjetivo:0, gastos: CATEGORIAS_P2.map(c => ({ categoria:c, descricao:"", valor:0, limite:0, parcela:"", fixo:false, pagamento:"" })) }
+      p1: { salario:0, rendaExtra:0, investimentoObjetivo:0, gastos: CATEGORIAS_P1.map(c => ({ categoria:c, descricao:"", valor:0, limite:0, parcela:"", fixo:false, pagamento:"", pago:false })) },
+      p2: { salario:0, rendaExtra:0, investimentoObjetivo:0, gastos: CATEGORIAS_P2.map(c => ({ categoria:c, descricao:"", valor:0, limite:0, parcela:"", fixo:false, pagamento:"", pago:false })) }
     };
   }
 
@@ -1257,6 +1278,7 @@
   let salvarTimeout = null;
   let acaoConfirmar = null;
   let abaAtiva = "resumo";
+  let metasExpandidas = new Set();
 
   // ---------- sincronização com parceiro(a) (Firebase Firestore) ----------
   const FIREBASE_CONFIG = {
@@ -1500,6 +1522,18 @@
     if(linha) linha.classList.toggle('acima-limite', acima);
     if(aviso) aviso.textContent = acima ? `Passou o limite de ${formatarMoeda(item.limite)}` : '';
   }
+  function atualizarPagoLinha(pessoa, idx){
+    const item = dadosPessoa(pessoa).gastos[idx];
+    const linha = document.getElementById(`linha-${pessoa}-${idx}`);
+    if(!linha) return;
+    const btn = linha.querySelector('.btn-pago');
+    linha.classList.toggle('paga', !!item.pago);
+    if(btn){
+      btn.classList.toggle('marcada', !!item.pago);
+      btn.textContent = item.pago ? '✅' : '⬜';
+      btn.title = item.pago ? 'Marcar como pendente' : 'Marcar como paga';
+    }
+  }
   function atualizarBadgeParcela(pessoa, idx){
     const item = dadosPessoa(pessoa).gastos[idx];
     const el = document.getElementById(`badge-parcela-${pessoa}-${idx}`);
@@ -1528,7 +1562,8 @@
         parcela: '',
         fixo: !!it.fixo,
         pagamento: it.fixo ? (it.pagamento||'') : '',
-        fixoId: it.fixo ? (it.fixoId||'') : ''
+        fixoId: it.fixo ? (it.fixoId||'') : '',
+        pago: false
       })) };
     }
     return { p1: copiarPessoa(bd.p1), p2: copiarPessoa(bd.p2) };
@@ -1609,6 +1644,7 @@
       (m[k]?.gastos||[]).forEach(item=>{
         if(item.pagamento===undefined){ item.pagamento = item.cartao ? 'credito' : ''; }
         delete item.cartao;
+        if(item.pago===undefined) item.pago = false;
       });
     }); });
     return obj;
@@ -1767,7 +1803,8 @@
       const acimaInicial = estaAcimaLimite(item);
       const infoP = infoParcela(item);
       const infoPg = infoPagamento(item);
-      html += `<div class="linha-gasto ${acimaInicial?'acima-limite':''}" id="linha-${chave}-${i}">
+      html += `<div class="linha-gasto ${acimaInicial?'acima-limite':''} ${item.pago?'paga':''}" id="linha-${chave}-${i}">
+        <button class="btn-pago ${item.pago?'marcada':''}" data-pessoa="${chave}" data-idx="${i}" title="${item.pago?'Marcar como pendente':'Marcar como paga'}">${item.pago?'✅':'⬜'}</button>
         <div>
           <div class="categoria-nome-linha">
             <span class="categoria-icone" title="${item.categoria}">${iconeCategoria(item.categoria)}</span><span class="categoria-nome">${item.categoria}</span>
@@ -2093,32 +2130,42 @@
         </div>`;
       }).join("") : `<p class="card-sub" style="margin:0;">Ainda sem aportes guardados.</p>`;
 
-      return `<div class="card meta-card" data-meta-card-id="${m.id}" style="border:1px solid var(--line);border-radius:14px;padding:16px;background:var(--paper);">
-        <input type="text" class="meta-nome-input" data-meta-id="${m.id}" data-meta-campo="nome" value="${m.nome}">
-        <div class="meta-campo-row">
-          <div class="meta-campo">
-            <label>Valor do objetivo</label>
-            <div class="caixa"><span>R$</span><input type="number" inputmode="decimal" data-meta-id="${m.id}" data-meta-campo="valorObjetivo" value="${m.valorObjetivo||''}"></div>
+      const expandida = metasExpandidas.has(m.id);
+
+      return `<div class="card meta-card ${expandida?'expandida':''}" data-meta-card-id="${m.id}" style="border:1px solid var(--line);border-radius:14px;padding:16px;background:var(--paper);">
+        <div class="meta-card-header" data-meta-toggle="${m.id}">
+          <div class="meta-header-topo">
+            <span class="meta-header-nome">${m.nome}</span>
+            <span class="meta-header-seta">${expandida?'▲':'▼'}</span>
           </div>
-          <div class="meta-campo">
-            <label>Já guardado antes</label>
-            <div class="caixa"><span>R$</span><input type="number" inputmode="decimal" data-meta-id="${m.id}" data-meta-campo="saldoInicial" value="${saldoInicial||''}" placeholder="0,00"></div>
+          <div class="meta-progress-bg"><div class="meta-progress-fill" style="width:${pct}%"></div></div>
+          <div class="meta-numeros"><span>Guardado até agora <b>${formatarMoeda(guardado)}</b></span><span>Falta <b>${formatarMoeda(falta)}</b></span></div>
+        </div>
+        <div class="meta-detalhe ${expandida?'':'oculto'}" id="meta-detalhe-${m.id}">
+          <input type="text" class="meta-nome-input" data-meta-id="${m.id}" data-meta-campo="nome" value="${m.nome}">
+          <div class="meta-campo-row">
+            <div class="meta-campo">
+              <label>Valor do objetivo</label>
+              <div class="caixa"><span>R$</span><input type="number" inputmode="decimal" data-meta-id="${m.id}" data-meta-campo="valorObjetivo" value="${m.valorObjetivo||''}"></div>
+            </div>
+            <div class="meta-campo">
+              <label>Já guardado antes</label>
+              <div class="caixa"><span>R$</span><input type="number" inputmode="decimal" data-meta-id="${m.id}" data-meta-campo="saldoInicial" value="${saldoInicial||''}" placeholder="0,00"></div>
+            </div>
           </div>
+          <div class="meta-campo meta-campo-wide">
+            <label>Investimento no objetivo deste mês — Pessoa 1</label>
+            <div class="caixa"><span>R$</span><input type="number" inputmode="decimal" data-meta-id="${m.id}" data-meta-campo="contribuicaoMes" data-meta-pessoa="p1" value="${contribP1||''}" placeholder="0,00"></div>
+          </div>
+          <div class="meta-campo meta-campo-wide">
+            <label>Investimento no objetivo deste mês — Pessoa 2</label>
+            <div class="caixa"><span>R$</span><input type="number" inputmode="decimal" data-meta-id="${m.id}" data-meta-campo="contribuicaoMes" data-meta-pessoa="p2" value="${contribP2||''}" placeholder="0,00"></div>
+          </div>
+          <p class="mini-info">O valor deste mês será somado automaticamente ao que já está guardado.</p>
+          <p class="meta-historico-titulo">Guardado por mês</p>
+          <div class="meta-mini-barras">${miniBarras}</div>
+          <div class="meta-remover-linha"><button data-remover-meta="${m.id}">Remover objetivo</button></div>
         </div>
-        <div class="meta-campo meta-campo-wide">
-          <label>Investimento no objetivo deste mês — Pessoa 1</label>
-          <div class="caixa"><span>R$</span><input type="number" inputmode="decimal" data-meta-id="${m.id}" data-meta-campo="contribuicaoMes" data-meta-pessoa="p1" value="${contribP1||''}" placeholder="0,00"></div>
-        </div>
-        <div class="meta-campo meta-campo-wide">
-          <label>Investimento no objetivo deste mês — Pessoa 2</label>
-          <div class="caixa"><span>R$</span><input type="number" inputmode="decimal" data-meta-id="${m.id}" data-meta-campo="contribuicaoMes" data-meta-pessoa="p2" value="${contribP2||''}" placeholder="0,00"></div>
-        </div>
-        <p class="mini-info">O valor deste mês será somado automaticamente ao que já está guardado.</p>
-        <div class="meta-progress-bg"><div class="meta-progress-fill" style="width:${pct}%"></div></div>
-        <div class="meta-numeros"><span>Guardado até agora <b>${formatarMoeda(guardado)}</b></span><span>Falta <b>${formatarMoeda(falta)}</b></span></div>
-        <p class="meta-historico-titulo">Guardado por mês</p>
-        <div class="meta-mini-barras">${miniBarras}</div>
-        <div class="meta-remover-linha"><button data-remover-meta="${m.id}">Remover objetivo</button></div>
       </div>`;
     }).join("");
   }
@@ -2134,10 +2181,23 @@
   }
 
   function ligarEventosMetas(){
+    document.querySelectorAll('[data-meta-toggle]').forEach(header=>{
+      header.onclick = e=>{
+        const id = e.currentTarget.dataset.metaToggle;
+        if(metasExpandidas.has(id)) metasExpandidas.delete(id);
+        else metasExpandidas.add(id);
+        renderMetas();
+        ligarEventosMetas();
+      };
+    });
+
     document.querySelectorAll('[data-meta-campo="nome"]').forEach(inp=>{
       inp.oninput = e=>{
         const meta = estado.metas.find(m=>m.id===e.target.dataset.metaId);
         meta.nome = e.target.value;
+        const card = document.querySelector(`[data-meta-card-id="${meta.id}"]`);
+        const header = card ? card.querySelector('.meta-header-nome') : null;
+        if(header) header.textContent = meta.nome;
         renderMetasResumo();
         salvar();
       };
@@ -2409,6 +2469,16 @@
       };
     });
 
+    document.querySelectorAll('.btn-pago').forEach(btn=>{
+      btn.onclick = e=>{
+        const {pessoa, idx} = e.currentTarget.dataset;
+        const item = dadosPessoa(pessoa).gastos[idx];
+        item.pago = !item.pago;
+        atualizarPagoLinha(pessoa, idx);
+        salvar();
+      };
+    });
+
     document.querySelectorAll('.link-mais-opcoes').forEach(btn=>{
       btn.onclick = e=>{
         const id = e.currentTarget.dataset.toggleOpcoes;
@@ -2488,7 +2558,8 @@
             parcela:quantidade > 1 ? `${n+1}/${quantidade}` : '',
             fixo:tipoGasto === 'fixo',
             pagamento:pagamento,
-            fixoId:tipoGasto === 'fixo' ? 'fixo-'+Date.now()+Math.random().toString(16).slice(2) : ''
+            fixoId:tipoGasto === 'fixo' ? 'fixo-'+Date.now()+Math.random().toString(16).slice(2) : '',
+            pago:false
           };
           const linhaVazia = pessoaMes.gastos.find(item=>!item.fixo && !item.parcela && !item.pagamento && Number(item.valor)===0 && item.categoria===cat && (item.descricao||'')===desc);
           if(linhaVazia) Object.assign(linhaVazia,itemParcela);
