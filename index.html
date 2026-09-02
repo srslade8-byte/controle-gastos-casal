@@ -305,13 +305,14 @@
   .ficha{border-top:1px solid var(--line);}
   .linha-gasto{
     display:grid;
-    grid-template-columns:auto 1fr auto auto;
+    grid-template-columns:auto minmax(0,1fr) auto auto;
     align-items:center;
     padding:14px 0;
     border-bottom:1px dashed var(--line);
-    gap:10px;
+    gap:8px;
     transition:opacity .25s ease;
   }
+  .linha-gasto-info{min-width:0;}
   .linha-gasto:last-child{border-bottom:none;}
   .linha-gasto.paga{opacity:.5;}
   .linha-gasto.paga .categoria-nome,
@@ -1981,7 +1982,7 @@
       const infoPg = infoPagamento(item);
       html += `<div class="linha-gasto ${acimaInicial?'acima-limite':''} ${item.pago?'paga':''}" id="linha-${chave}-${i}">
         <button class="btn-pago ${item.pago?'marcada':''}" data-pessoa="${chave}" data-idx="${i}" title="${item.pago?'Marcar como pendente':'Marcar como paga'}" aria-label="Marcar como paga"></button>
-        <div>
+        <div class="linha-gasto-info">
           <div class="categoria-nome-linha">
             <span class="categoria-icone" title="${item.categoria}">${iconeCategoria(item.categoria)}</span><input type="text" class="categoria-nome-input" data-pessoa="${chave}" data-idx="${i}" data-campo="categoria" value="${item.categoria}">
             <span class="badge-fixo ${item.fixo?'':'oculto'}" id="badge-fixo-${chave}-${i}" title="Repete todo mês">📌</span>
