@@ -303,20 +303,49 @@
 
   /* linhas de gasto tipo ficha */
   .ficha{border-top:1px solid var(--line);}
+  .linha-gasto-swipe{position:relative;overflow:hidden;border-bottom:1px dashed var(--line);}
+  .linha-gasto-swipe:last-child{border-bottom:none;}
   .linha-gasto{
     display:grid;
-    grid-template-columns:auto minmax(0,1fr) auto auto;
+    grid-template-columns:auto minmax(0,1fr) auto;
     align-items:center;
     padding:14px 0;
-    border-bottom:1px dashed var(--line);
     gap:8px;
-    transition:opacity .25s ease;
+    background:var(--white);
+    position:relative;
+    touch-action:pan-y;
   }
+  .linha-gasto.swipe-arrastando{transition:none;}
+  .linha-gasto.swipe-transicao{transition:transform .22s cubic-bezier(.22,.8,.32,1);}
   .linha-gasto-info{min-width:0;}
-  .linha-gasto:last-child{border-bottom:none;}
   .linha-gasto.paga{opacity:.5;}
   .linha-gasto.paga .categoria-nome,
   .linha-gasto.paga .categoria-desc-input{text-decoration:line-through;}
+
+  .swipe-fundo{
+    position:absolute;
+    inset:0;
+    background:var(--red);
+    display:flex;
+    align-items:stretch;
+    justify-content:flex-end;
+  }
+  .btn-remover-swipe{
+    border:none;
+    background:none;
+    color:#fff;
+    width:84px;
+    flex:none;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:3px;
+    font-size:19px;
+    cursor:pointer;
+  }
+  .btn-remover-swipe span{font-size:10.5px;font-weight:700;letter-spacing:.02em;}
+  .dica-arrastar{display:flex;justify-content:flex-end;padding:3px 2px 0;font-size:10.5px;color:var(--ink-soft);opacity:.7;}
 
   .btn-pago{
     appearance:none;
@@ -395,26 +424,6 @@
     font-variant-numeric:tabular-nums;
   }
   .valor-input:focus{outline:none;}
-
-  .btn-remover{
-    border:none;
-    background:var(--paper-deep);
-    color:var(--ink-soft);
-    opacity:1;
-    font-size:15px;
-    line-height:1;
-    width:32px;
-    height:32px;
-    min-width:32px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    cursor:pointer;
-    border-radius:50%;
-    flex:none;
-    transition:background .15s ease,color .15s ease,transform .1s ease;
-  }
-  .btn-remover:active{color:#fff;background:var(--red);transform:scale(.92);}
 
   .total-row{
     display:flex;
@@ -1980,7 +1989,11 @@
       const acimaInicial = estaAcimaLimite(item);
       const infoP = infoParcela(item);
       const infoPg = infoPagamento(item);
-      html += `<div class="linha-gasto ${acimaInicial?'acima-limite':''} ${item.pago?'paga':''}" id="linha-${chave}-${i}">
+      html += `<div class="linha-gasto-swipe">
+        <div class="swipe-fundo">
+          <button class="btn-remover-swipe" data-pessoa="${chave}" data-idx="${i}" title="Remover categoria">🗑<span>Remover</span></button>
+        </div>
+        <div class="linha-gasto ${acimaInicial?'acima-limite':''} ${item.pago?'paga':''}" id="linha-${chave}-${i}">
         <button class="btn-pago ${item.pago?'marcada':''}" data-pessoa="${chave}" data-idx="${i}" title="${item.pago?'Marcar como pendente':'Marcar como paga'}" aria-label="Marcar como paga"></button>
         <div class="linha-gasto-info">
           <div class="categoria-nome-linha">
@@ -2011,9 +2024,10 @@
           <span>R$</span>
           <input type="text" inputmode="decimal" class="valor-input" data-pessoa="${chave}" data-idx="${i}" data-campo="valor" value="${formatarValorInput(item.valor)}" placeholder="0,00">
         </div>
-        <button class="btn-remover" data-pessoa="${chave}" data-idx="${i}" title="Remover categoria">✕</button>
+        </div>
       </div>`;
     });
+    if(p.gastos.length) html += `<p class="dica-arrastar">arraste uma categoria pra esquerda pra remover</p>`;
 
     html += `</div>
       <div class="total-row">
@@ -2604,6 +2618,96 @@
     });
   });
 
+  // ---------- arrastar categoria pra esquerda pra remover ----------
+  function removerGasto(pessoa, idx){
+    const item = dadosPessoa(pessoa).gastos[idx];
+    if(!item) return;
+    registrarAtividade(pessoa, 'removeu', item);
+    if(item.origemMeta && item.retiradaId){
+      const meta = (estado.metas||[]).find(m=>m.id===item.origemMeta);
+      if(meta && meta.retiradas) meta.retiradas = meta.retiradas.filter(r=>r.id!==item.retiradaId);
+    }
+    dadosPessoa(pessoa).gastos.splice(idx,1);
+    renderTudo();
+    salvar();
+  }
+  function ligarSwipeRemover(){
+    const REVEAL = 84, ABRIR = 38, LONGE = 130;
+
+    function fecharTodas(exceto){
+      document.querySelectorAll('.linha-gasto-swipe.swipe-aberta').forEach(wrap=>{
+        if(wrap === exceto) return;
+        wrap.classList.remove('swipe-aberta');
+        const linha = wrap.querySelector('.linha-gasto');
+        if(linha){ linha.classList.add('swipe-transicao'); linha.style.transform = ''; }
+      });
+    }
+
+    document.querySelectorAll('.linha-gasto-swipe').forEach(wrap=>{
+      const linha = wrap.querySelector('.linha-gasto');
+      if(!linha) return;
+      let est = null;
+
+      linha.addEventListener('pointerdown', e=>{
+        if(e.pointerType === 'mouse' && e.button !== 0) return;
+        est = { startX:e.clientX, startY:e.clientY, offsetInicial: wrap.classList.contains('swipe-aberta') ? -REVEAL : 0, decidido:false, ehSwipe:false, deltaX:0 };
+      });
+
+      linha.addEventListener('pointermove', e=>{
+        if(!est) return;
+        const dx = e.clientX - est.startX;
+        const dy = e.clientY - est.startY;
+        if(!est.decidido){
+          if(Math.abs(dx) > 8 || Math.abs(dy) > 8){
+            est.decidido = true;
+            est.ehSwipe = Math.abs(dx) > Math.abs(dy);
+            if(est.ehSwipe){ fecharTodas(wrap); linha.classList.remove('swipe-transicao'); linha.classList.add('swipe-arrastando'); }
+          }
+        }
+        if(!est.ehSwipe) return;
+        e.preventDefault();
+        est.deltaX = dx;
+        const total = est.offsetInicial + dx;
+        const visual = Math.max(Math.min(total,0), -REVEAL-14);
+        linha.style.transform = `translateX(${visual}px)`;
+      });
+
+      const finalizar = ()=>{
+        if(!est) return;
+        linha.classList.remove('swipe-arrastando');
+        linha.classList.add('swipe-transicao');
+        if(est.ehSwipe){
+          const total = est.offsetInicial + est.deltaX;
+          if(total <= -LONGE){
+            linha.style.transform = `translateX(-100%)`;
+            const btn = wrap.querySelector('.btn-remover-swipe');
+            const {pessoa, idx} = btn ? btn.dataset : {};
+            setTimeout(()=>{ if(pessoa!==undefined) removerGasto(pessoa, idx); }, 140);
+          } else if(total <= -ABRIR){
+            wrap.classList.add('swipe-aberta');
+            linha.style.transform = `translateX(-${REVEAL}px)`;
+          } else {
+            wrap.classList.remove('swipe-aberta');
+            linha.style.transform = '';
+          }
+        }
+        est = null;
+      };
+      linha.addEventListener('pointerup', finalizar);
+      linha.addEventListener('pointercancel', finalizar);
+
+      // tocar na linha aberta (sem arrastar) fecha ela, em vez de editar o campo
+      linha.addEventListener('click', e=>{
+        if(wrap.classList.contains('swipe-aberta')){
+          e.preventDefault(); e.stopPropagation();
+          wrap.classList.remove('swipe-aberta');
+          linha.classList.add('swipe-transicao');
+          linha.style.transform = '';
+        }
+      }, true);
+    });
+  }
+
   // ---------- eventos dinâmicos (abas de pessoa) ----------
   function ligarEventosDinamicos(){
     document.querySelectorAll('.pessoa-nome-input').forEach(inp=>{
@@ -2709,23 +2813,16 @@
       };
     });
 
-    document.querySelectorAll('.btn-remover').forEach(btn=>{
+    document.querySelectorAll('.btn-remover-swipe').forEach(btn=>{
       btn.onclick = e=>{
         const {pessoa, idx} = e.currentTarget.dataset;
         const item = dadosPessoa(pessoa).gastos[idx];
+        if(!item) return;
         const avisoObjetivo = item.origemMeta ? ' O valor voltará para o saldo do objetivo.' : '';
-        pedirConfirmacao(`Remover a categoria "${item.categoria}"?${avisoObjetivo}`, ()=>{
-          registrarAtividade(pessoa, 'removeu', item);
-          if(item.origemMeta && item.retiradaId){
-            const meta = (estado.metas||[]).find(m=>m.id===item.origemMeta);
-            if(meta && meta.retiradas) meta.retiradas = meta.retiradas.filter(r=>r.id!==item.retiradaId);
-          }
-          dadosPessoa(pessoa).gastos.splice(idx,1);
-          renderTudo();
-          salvar();
-        });
+        pedirConfirmacao(`Remover a categoria "${item.categoria}"?${avisoObjetivo}`, ()=> removerGasto(pessoa, idx));
       };
     });
+    ligarSwipeRemover();
 
     document.querySelectorAll('[data-abrir-form]').forEach(btn=>{
       btn.onclick = e=>{
