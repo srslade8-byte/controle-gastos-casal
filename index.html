@@ -346,6 +346,20 @@
     font-size:14.5px;
     font-weight:600;
   }
+  .categoria-nome-input{
+    font-size:14.5px;
+    font-weight:600;
+    font-family:inherit;
+    color:inherit;
+    border:none;
+    background:transparent;
+    padding:2px 5px;
+    border-radius:6px;
+    min-width:64px;
+    max-width:100%;
+  }
+  .categoria-nome-input:hover{background:var(--paper-deep);}
+  .categoria-nome-input:focus{background:var(--paper-deep);outline:1.5px solid var(--accent);}
   .categoria-desc-input{
     border:none;
     background:none;
@@ -691,6 +705,9 @@
   .meta-mini-barra{width:14px;border-radius:4px 4px 1px 1px;min-height:2px;transition:height .5s ease;}
   .meta-mini-mes{font-size:8px;color:var(--ink-soft);white-space:nowrap;}
   .meta-remover-linha{display:flex;justify-content:flex-end;margin-top:12px;}
+  .meta-retiradas-lista{display:flex;flex-direction:column;gap:6px;}
+  .meta-retirada-item{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-soft);padding:6px 0;border-bottom:1px dashed var(--line);}
+  .meta-retirada-item span:last-child{color:var(--red);font-weight:600;}
   .meta-remover-linha button{border:none;background:none;color:var(--ink-soft);font-size:12px;cursor:pointer;padding:6px 4px;}
   .meta-remover-linha button:active{color:var(--red);}
   .meta-vazio{text-align:center;padding:26px 14px;color:var(--ink-soft);font-size:13px;line-height:1.5;}
@@ -938,20 +955,23 @@
   .badge-pagamento.pix{background:#DCF3EE;color:#0d7d68;}
   .badge-pagamento.debito{background:#E3ECF8;color:#3f5b7d;}
   .badge-pagamento.credito{background:#F5E6EC;color:#9c4f6b;}
+  .badge-pagamento.objetivo{background:#FAF0DC;color:#8a6a1a;}
   body.dark .badge-pagamento.pix{background:#0d7d6833;color:#5fd9c2;}
   body.dark .badge-pagamento.debito{background:#3f5b7d33;color:#9db8de;}
   body.dark .badge-pagamento.credito{background:#9c4f6b33;color:#e9a8c1;}
+  body.dark .badge-pagamento.objetivo{background:#8a6a1a33;color:#e8c877;}
   .select-pagamento{width:100%;border:1.5px solid var(--line);background:var(--white);border-radius:10px;padding:11px;color:var(--ink);font:inherit;}
   .select-pagamento + .mini-info{display:block;margin-top:6px;}
-  .pagamento-grupo{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:3px 0 4px;}
+  .pagamento-grupo{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:3px 0 4px;}
   .pagamento-opcao{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px 3px;border:1.5px solid var(--line);background:var(--white);border-radius:14px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;font-size:10.5px;color:var(--ink-soft);transition:border-color .18s ease,background .18s ease,transform .12s ease;text-align:center;line-height:1.15;}
   .pagamento-opcao .pagamento-emoji{font-size:19px;}
   .pagamento-opcao:active{transform:scale(.96);}
   .pagamento-opcao.ativa{border-color:var(--accent);background:color-mix(in srgb, var(--accent) 8%, var(--paper));color:var(--ink);font-weight:700;box-shadow:0 0 0 1.5px var(--accent) inset;}
   .campo-parcelas{margin-top:5px;background:var(--paper);border:1.5px solid var(--line);border-radius:14px;padding:12px 13px;}
   .campo-parcelas label{display:block;font-size:11.5px;font-weight:600;color:var(--ink-soft);margin-bottom:6px;}
-  .campo-parcelas input{width:100%;border:1.5px solid var(--line);background:var(--white);border-radius:9px;padding:11px;color:var(--ink);font:inherit;}
+  .campo-parcelas input,.campo-parcelas select{width:100%;border:1.5px solid var(--line);background:var(--white);border-radius:9px;padding:11px;color:var(--ink);font:inherit;}
   .campo-parcelas .mini-info{margin-top:7px;}
+  .campo-parcelas .form-erro{color:var(--red);font-size:11.5px;margin-top:7px;font-weight:600;}
   .install-share{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:13px;margin-top:9px;font-size:12px;color:var(--ink-soft);}
   .sync-status{display:flex;align-items:center;gap:11px;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:13px 15px;margin-bottom:16px;}
   .sync-status .ponto{width:9px;height:9px;border-radius:50%;background:var(--ink-soft);flex:none;box-shadow:0 0 0 3px color-mix(in srgb, var(--ink-soft) 20%, transparent);}
@@ -1556,6 +1576,7 @@
   }
 
   function totalPessoa(p){ return p.gastos.reduce((s,i)=>s+(Number(i.valor)||0),0); }
+  function totalPessoaSaldo(p){ return p.gastos.reduce((s,i)=> i.origemMeta ? s : s+(Number(i.valor)||0),0); }
   function rendaPessoa(p){ return (Number(p.salario)||0) + (Number(p.rendaExtra)||0); }
   function investimentoPessoaMes(chavePessoa, chaveM=estado.mesAtual){
     return (estado.metas||[]).reduce((s,m)=>{
@@ -1593,6 +1614,10 @@
       case 'pix': return {classe:'pix', emoji:'🔑', titulo:'Pago via Pix', texto:'Pix'};
       case 'debito': return {classe:'debito', emoji:'💳', titulo:'Pago no cartão de débito', texto:'Débito'};
       case 'credito': return {classe:'credito', emoji:'💳', titulo:'Pago no cartão de crédito', texto:'Crédito'};
+      case 'objetivo': {
+        const meta = (estado.metas||[]).find(m=>m.id===item.origemMeta);
+        return {classe:'objetivo', emoji:'🎯', titulo:'Pago com o saldo do objetivo'+(meta?(' "'+meta.nome+'"'):''), texto: meta ? meta.nome : 'Objetivo'};
+      }
       default: return null;
     }
   }
@@ -1650,6 +1675,8 @@
         parcela: '',
         fixo: !!it.fixo,
         pagamento: it.fixo ? (it.pagamento||'') : '',
+        origemMeta: '',
+        retiradaId: '',
         fixoId: it.fixo ? (it.fixoId||'') : '',
         pago: false
       })) };
@@ -1673,6 +1700,7 @@
   function mesesOrdenados(){ return Object.keys(estado.meses).sort(); }
 
   function totalMesCombinado(chaveM){ const m = estado.meses[chaveM]; return totalPessoa(m.p1) + totalPessoa(m.p2) + investimentoPessoaMes('p1',chaveM) + investimentoPessoaMes('p2',chaveM); }
+  function totalMesCombinadoSaldo(chaveM){ const m = estado.meses[chaveM]; return totalPessoaSaldo(m.p1) + totalPessoaSaldo(m.p2) + investimentoPessoaMes('p1',chaveM) + investimentoPessoaMes('p2',chaveM); }
   function rendaMesCombinada(chaveM){ const m=estado.meses[chaveM]; return rendaPessoa(m.p1)+rendaPessoa(m.p2); }
   function registrarBackup(tipo, destino){
     if(!estado.historicoBackup) estado.historicoBackup=[];
@@ -1712,6 +1740,7 @@
     obj.metas.forEach(meta=>{
       if(meta.saldoInicial===undefined) meta.saldoInicial=0;
       if(!meta.contribuicoes) meta.contribuicoes={};
+      if(!meta.retiradas) meta.retiradas=[];
       Object.keys(meta.contribuicoes).forEach(mes=>{
         const valor = meta.contribuicoes[mes];
         if(typeof valor !== 'object') meta.contribuicoes[mes] = {p1:Number(valor)||0,p2:0};
@@ -1895,7 +1924,7 @@
         <button class="btn-pago ${item.pago?'marcada':''}" data-pessoa="${chave}" data-idx="${i}" title="${item.pago?'Marcar como pendente':'Marcar como paga'}" aria-label="Marcar como paga"></button>
         <div>
           <div class="categoria-nome-linha">
-            <span class="categoria-icone" title="${item.categoria}">${iconeCategoria(item.categoria)}</span><span class="categoria-nome">${item.categoria}</span>
+            <span class="categoria-icone" title="${item.categoria}">${iconeCategoria(item.categoria)}</span><input type="text" class="categoria-nome-input" data-pessoa="${chave}" data-idx="${i}" data-campo="categoria" value="${item.categoria}">
             <span class="badge-fixo ${item.fixo?'':'oculto'}" id="badge-fixo-${chave}-${i}" title="Repete todo mês">📌</span>
             <span class="badge-parcela ${infoP?'':'oculto'} ${infoP&&infoP.ultima?'ultima':''}" id="badge-parcela-${chave}-${i}">${infoP?infoP.texto:''}</span>
             <span class="badge-pagamento ${infoPg?infoPg.classe:''} ${infoPg?'':'oculto'}" title="${infoPg?infoPg.titulo:''}"><span class="emoji">${infoPg?infoPg.emoji:''}</span>${infoPg?infoPg.texto:''}</span>
@@ -1953,12 +1982,22 @@
           <button type="button" class="pagamento-opcao" data-pagamento-btn="${chave}" data-pagamento-valor="pix"><span class="pagamento-emoji">🔑</span><span>Pix</span></button>
           <button type="button" class="pagamento-opcao" data-pagamento-btn="${chave}" data-pagamento-valor="debito"><span class="pagamento-emoji">💳</span><span>Débito</span></button>
           <button type="button" class="pagamento-opcao" data-pagamento-btn="${chave}" data-pagamento-valor="credito"><span class="pagamento-emoji">💳</span><span>Crédito</span></button>
+          <button type="button" class="pagamento-opcao" data-pagamento-btn="${chave}" data-pagamento-valor="objetivo"><span class="pagamento-emoji">🎯</span><span>Objetivo</span></button>
         </div>
         <input type="hidden" id="novoPagamento-${chave}" value="dinheiro">
         <div class="campo-parcelas oculto" id="campoParcelas-${chave}">
           <label>Parcelado em quantas vezes?</label>
           <input type="number" min="1" step="1" inputmode="numeric" id="novoParcelas-${chave}" placeholder="Ex: 1 (à vista) ou 6" value="1">
           <small class="mini-info">Use 1 para compra à vista no cartão. As parcelas seguintes são lançadas automaticamente nos próximos meses.</small>
+        </div>
+        <div class="campo-parcelas oculto" id="campoObjetivo-${chave}">
+          <label>Retirar de qual objetivo?</label>
+          <select id="novoObjetivoId-${chave}">
+            <option value="">Selecione...</option>
+            ${(estado.metas||[]).map(m=>`<option value="${m.id}">${m.nome} (guardado: ${formatarMoeda(totalGuardadoMeta(m))})</option>`).join('')}
+          </select>
+          <small class="mini-info">O valor sai do saldo guardado nesse objetivo, não do salário do mês — mas o gasto continua contando nos gráficos e no total do mês.</small>
+          <div class="form-erro oculto" id="objetivoErro-${chave}"></div>
         </div>
         <div class="form-botoes">
           <button class="btn-cancelar" data-cancelar-form="${chave}">Cancelar</button>
@@ -1983,7 +2022,7 @@
 
   function renderResumo(){
     const p1 = dadosPessoa('p1'), p2 = dadosPessoa('p2');
-    const gastosP1 = totalPessoa(p1), gastosP2 = totalPessoa(p2);
+    const gastosP1 = totalPessoaSaldo(p1), gastosP2 = totalPessoaSaldo(p2);
     const objetivoP1 = investimentoPessoaMes('p1'), objetivoP2 = investimentoPessoaMes('p2');
     const totalP1 = gastosP1 + objetivoP1, totalP2 = gastosP2 + objetivoP2;
     const salP1 = rendaPessoa(p1), salP2 = rendaPessoa(p2);
@@ -2156,13 +2195,16 @@
   }
 
   // ---------- metas ----------
+  function totalRetiradasMeta(meta){
+    return (meta.retiradas||[]).reduce((s,r)=>s+(Number(r.valor)||0),0);
+  }
   function totalGuardadoMeta(meta){
     const inicial = Number(meta.saldoInicial)||0;
     const aportes = Object.values(meta.contribuicoes||{}).reduce((s,v)=>{
       if(v && typeof v === 'object') return s + (Number(v.p1)||0) + (Number(v.p2)||0);
       return s + (Number(v)||0);
     },0);
-    return inicial + aportes;
+    return inicial + aportes - totalRetiradasMeta(meta);
   }
   function faltaMeta(meta){
     return Math.max(0, (Number(meta.valorObjetivo)||0) - totalGuardadoMeta(meta));
@@ -2252,6 +2294,8 @@
           <p class="mini-info">O valor deste mês será somado automaticamente ao que já está guardado.</p>
           <p class="meta-historico-titulo">Guardado por mês</p>
           <div class="meta-mini-barras">${miniBarras}</div>
+          ${(m.retiradas&&m.retiradas.length) ? `<p class="meta-historico-titulo">Retirado para pagar contas</p>
+          <div class="meta-retiradas-lista">${m.retiradas.slice().reverse().map(r=>`<div class="meta-retirada-item"><span>${r.descricao||'Pagamento'}</span><span>− ${formatarMoeda(r.valor)}</span></div>`).join('')}</div>` : ''}
           <div class="meta-remover-linha"><button data-remover-meta="${m.id}">Remover objetivo</button></div>
         </div>
       </div>`;
@@ -2343,7 +2387,7 @@
     const nome = document.getElementById('novaMetaNome').value.trim();
     const valor = parseFloat(document.getElementById('novaMetaValor').value)||0;
     if(!nome){ document.getElementById('novaMetaNome').focus(); return; }
-    estado.metas.push({ id: 'm'+Date.now()+Math.random().toString(16).slice(2), nome, valorObjetivo: valor, saldoInicial: 0, contribuicoes:{} });
+    estado.metas.push({ id: 'm'+Date.now()+Math.random().toString(16).slice(2), nome, valorObjetivo: valor, saldoInicial: 0, contribuicoes:{}, retiradas:[] });
     document.getElementById('novaMetaNome').value = "";
     document.getElementById('novaMetaValor').value = "";
     document.getElementById('formNovaMeta').classList.remove('aberto');
@@ -2358,7 +2402,7 @@
     const valores = meses.map(c=>{
       const m = estado.meses[c];
       const sal = rendaMesCombinada(c);
-      return sal - totalMesCombinado(c);
+      return sal - totalMesCombinadoSaldo(c);
     });
     const passo = 54;
     const largura = Math.max(260, meses.length*passo);
@@ -2528,6 +2572,17 @@
       };
     });
 
+    document.querySelectorAll('.categoria-nome-input').forEach(inp=>{
+      inp.oninput = e=>{
+        const {pessoa, idx} = e.target.dataset;
+        const item = dadosPessoa(pessoa).gastos[idx];
+        item.categoria = e.target.value;
+        const icone = e.target.closest('.categoria-nome-linha')?.querySelector('.categoria-icone');
+        if(icone){ icone.textContent = iconeCategoria(item.categoria); icone.title = item.categoria; }
+        salvar();
+      };
+    });
+
     document.querySelectorAll('.input-limite').forEach(inp=>{
       inp.oninput = e=>{
         const {pessoa, idx} = e.target.dataset;
@@ -2580,8 +2635,13 @@
       btn.onclick = e=>{
         const {pessoa, idx} = e.currentTarget.dataset;
         const item = dadosPessoa(pessoa).gastos[idx];
-        pedirConfirmacao(`Remover a categoria "${item.categoria}"?`, ()=>{
+        const avisoObjetivo = item.origemMeta ? ' O valor voltará para o saldo do objetivo.' : '';
+        pedirConfirmacao(`Remover a categoria "${item.categoria}"?${avisoObjetivo}`, ()=>{
           registrarAtividade(pessoa, 'removeu', item);
+          if(item.origemMeta && item.retiradaId){
+            const meta = (estado.metas||[]).find(m=>m.id===item.origemMeta);
+            if(meta && meta.retiradas) meta.retiradas = meta.retiradas.filter(r=>r.id!==item.retiradaId);
+          }
           dadosPessoa(pessoa).gastos.splice(idx,1);
           renderTudo();
           salvar();
@@ -2614,7 +2674,10 @@
         if(hidden) hidden.value = valor;
         const campo = document.getElementById('campoParcelas-'+chave);
         if(campo) campo.classList.toggle('oculto', valor !== 'credito');
+        const campoObj = document.getElementById('campoObjetivo-'+chave);
+        if(campoObj) campoObj.classList.toggle('oculto', valor !== 'objetivo');
         if(valor === 'credito') document.getElementById('novoParcelas-'+chave)?.focus();
+        if(valor === 'objetivo') document.getElementById('novoObjetivoId-'+chave)?.focus();
       };
     });
 
@@ -2629,11 +2692,35 @@
         const quantidadeInformada = parseInt(document.getElementById('novoParcelas-'+chave)?.value,10)||1;
         // gasto fixo se repete todo mês sozinho, então nunca é parcelado em várias vezes
         const quantidade = (pagamento === 'credito' && tipoGasto !== 'fixo') ? Math.max(1,quantidadeInformada) : 1;
+        const erroObjEl = document.getElementById('objetivoErro-'+chave);
+        if(erroObjEl){ erroObjEl.classList.add('oculto'); erroObjEl.textContent = ''; }
         if(!cat){ document.getElementById('novaCategoria-'+chave).focus(); return; }
         if(val <= 0){ document.getElementById('novoValor-'+chave).focus(); return; }
         if(pagamento === 'credito' && quantidade < 1){ document.getElementById('novoParcelas-'+chave).focus(); return; }
 
+        let metaEscolhida = null;
+        if(pagamento === 'objetivo'){
+          if(tipoGasto === 'fixo'){
+            if(erroObjEl){ erroObjEl.textContent = 'Um gasto pago com objetivo não pode ser fixo. Escolha "Somente neste mês".'; erroObjEl.classList.remove('oculto'); }
+            document.getElementById('novoTipoGasto-'+chave).focus();
+            return;
+          }
+          const metaId = document.getElementById('novoObjetivoId-'+chave)?.value || '';
+          metaEscolhida = (estado.metas||[]).find(m=>m.id===metaId);
+          if(!metaEscolhida){
+            if(erroObjEl){ erroObjEl.textContent = 'Escolha de qual objetivo o dinheiro vai sair.'; erroObjEl.classList.remove('oculto'); }
+            document.getElementById('novoObjetivoId-'+chave).focus();
+            return;
+          }
+          if(val > totalGuardadoMeta(metaEscolhida)){
+            if(erroObjEl){ erroObjEl.textContent = `Esse objetivo só tem ${formatarMoeda(totalGuardadoMeta(metaEscolhida))} guardado.`; erroObjEl.classList.remove('oculto'); }
+            document.getElementById('novoObjetivoId-'+chave).focus();
+            return;
+          }
+        }
+
         const valorParcela = Math.round((val/quantidade)*100)/100;
+        const retiradaId = metaEscolhida ? ('ret-'+Date.now()+Math.random().toString(16).slice(2)) : '';
         for(let n=0; n<quantidade; n++){
           const mes = deslocarMes(estado.mesAtual,n);
           const valorAtual = n === quantidade-1 ? Math.round((val - valorParcela*(quantidade-1))*100)/100 : valorParcela;
@@ -2646,6 +2733,8 @@
             parcela:quantidade > 1 ? `${n+1}/${quantidade}` : '',
             fixo:tipoGasto === 'fixo',
             pagamento:pagamento,
+            origemMeta: metaEscolhida ? metaEscolhida.id : '',
+            retiradaId: retiradaId,
             fixoId:tipoGasto === 'fixo' ? 'fixo-'+Date.now()+Math.random().toString(16).slice(2) : '',
             pago:false
           };
@@ -2653,6 +2742,15 @@
           if(linhaVazia) Object.assign(linhaVazia,itemParcela);
           else pessoaMes.gastos.push(itemParcela);
           if(n===0 && itemParcela.fixo) propagarGastoFixo(chave,itemParcela);
+        }
+        if(metaEscolhida){
+          if(!metaEscolhida.retiradas) metaEscolhida.retiradas = [];
+          metaEscolhida.retiradas.push({
+            id: retiradaId,
+            valor: val,
+            quando: new Date().toISOString(),
+            descricao: desc ? `${cat} — ${desc}` : cat
+          });
         }
         registrarAtividade(chave, 'adicionou', {categoria:cat, descricao:desc, valor:val});
         renderTudo();
@@ -2732,7 +2830,7 @@
   // ---------- compartilhar resumo do mes ----------
   function gerarResumoTexto(){
     const p1=dadosPessoa('p1'), p2=dadosPessoa('p2');
-    const gastosP1=totalPessoa(p1), gastosP2=totalPessoa(p2);
+    const gastosP1=totalPessoaSaldo(p1), gastosP2=totalPessoaSaldo(p2);
     const objetivoP1=investimentoPessoaMes('p1'), objetivoP2=investimentoPessoaMes('p2');
     const totalP1=gastosP1+objetivoP1, totalP2=gastosP2+objetivoP2;
     const salP1=rendaPessoa(p1), salP2=rendaPessoa(p2);
