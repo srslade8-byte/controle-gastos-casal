@@ -215,6 +215,13 @@
   .rd-comparativo.positivo{color:var(--green);}
   .rd-comparativo.negativo{color:var(--red);}
 
+  .link-por-pessoa{border:none;background:none;color:var(--ink-soft);font-size:11px;font-weight:600;text-decoration:underline;text-underline-offset:2px;padding:8px 0 0;cursor:pointer;display:block;}
+  .rd-por-pessoa{display:flex;gap:10px;margin-top:10px;}
+  .rd-pessoa-bloco{flex:1;min-width:0;background:var(--white);border:1px solid var(--line);border-radius:12px;padding:10px 12px;}
+  .rd-pessoa-nome{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--ink);margin:0 0 6px;}
+  .rd-pessoa-linha{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink-soft);padding:2px 0;}
+  .rd-pessoa-linha span:last-child{font-weight:700;font-variant-numeric:tabular-nums;}
+
   .subrow{
     display:flex;
     gap:10px;
@@ -1107,6 +1114,19 @@
         </span>
       </div>
     </div>
+    <button class="link-por-pessoa" id="btnRdPorPessoa">ver por pessoa</button>
+    <div class="rd-por-pessoa oculto" id="rdPorPessoa">
+      <div class="rd-pessoa-bloco">
+        <p class="rd-pessoa-nome"><span class="dot p1"></span><span id="rdNomeP1">Pessoa 1</span></p>
+        <div class="rd-pessoa-linha"><span>Receitas</span><span class="rd-valor-receita" id="rdReceitasP1">R$ 0,00</span></div>
+        <div class="rd-pessoa-linha"><span>Despesas</span><span class="rd-valor-despesa" id="rdDespesasP1">R$ 0,00</span></div>
+      </div>
+      <div class="rd-pessoa-bloco">
+        <p class="rd-pessoa-nome"><span class="dot p2"></span><span id="rdNomeP2">Pessoa 2</span></p>
+        <div class="rd-pessoa-linha"><span>Receitas</span><span class="rd-valor-receita" id="rdReceitasP2">R$ 0,00</span></div>
+        <div class="rd-pessoa-linha"><span>Despesas</span><span class="rd-valor-despesa" id="rdDespesasP2">R$ 0,00</span></div>
+      </div>
+    </div>
     <div class="subrow">
       <div class="chip"><span class="dot p1"></span><span id="chipP1">R$ 0,00</span></div>
       <div class="chip"><span class="dot p2"></span><span id="chipP2">R$ 0,00</span></div>
@@ -1932,6 +1952,12 @@
     document.getElementById('btnOlhoValores').textContent = '🙈';
   }
 
+  document.getElementById('btnRdPorPessoa').addEventListener('click', ()=>{
+    const bloco = document.getElementById('rdPorPessoa');
+    const aberto = bloco.classList.toggle('oculto') === false;
+    document.getElementById('btnRdPorPessoa').textContent = aberto ? 'ocultar por pessoa' : 'ver por pessoa';
+  });
+
   function aplicarTemaAba(aba){
     document.body.classList.remove('tema-p1','tema-p2','tema-metas','tema-historico');
     if(aba==='p1') document.body.classList.add('tema-p1');
@@ -2188,6 +2214,13 @@
       compReceitasEl.textContent = '';
       compDespesasEl.textContent = '';
     }
+
+    document.getElementById('rdNomeP1').textContent = estado.nomes.p1;
+    document.getElementById('rdNomeP2').textContent = estado.nomes.p2;
+    document.getElementById('rdReceitasP1').textContent = formatarMoeda(salP1);
+    document.getElementById('rdDespesasP1').textContent = formatarMoeda(totalPessoa(p1));
+    document.getElementById('rdReceitasP2').textContent = formatarMoeda(salP2);
+    document.getElementById('rdDespesasP2').textContent = formatarMoeda(totalPessoa(p2));
 
     document.getElementById('resumoNomeP1').textContent = estado.nomes.p1;
     document.getElementById('resumoNomeP2').textContent = estado.nomes.p2;
