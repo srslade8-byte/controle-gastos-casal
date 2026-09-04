@@ -1,4 +1,4 @@
-const CACHE_NOME = 'controle-de-gastos-v11';
+const CACHE_NOME = 'controle-de-gastos-v13';
 const ARQUIVOS = [
   './',
   './index.html',

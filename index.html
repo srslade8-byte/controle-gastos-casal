@@ -195,6 +195,25 @@
   }
   .saldo-valor.positivo{color:var(--green);}
   .saldo-valor.negativo{color:var(--red);}
+  .saldo-linha-direita{display:flex;align-items:center;gap:8px;}
+  .btn-olho{border:none;background:var(--paper-deep);color:var(--ink-soft);width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;flex:none;}
+  .btn-olho:active{transform:scale(.9);}
+  .valores-ocultos .saldo-valor,
+  .valores-ocultos .rd-valor,
+  .valores-ocultos .chip span:not(.dot){filter:blur(7px);user-select:none;}
+
+  .rd-linha{display:flex;gap:14px;margin-top:14px;}
+  .rd-item{display:flex;align-items:center;gap:10px;flex:1;min-width:0;}
+  .rd-icone{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex:none;}
+  .rd-icone.rd-receita{background:var(--green-soft);color:var(--green);}
+  .rd-icone.rd-despesa{background:var(--red-soft);color:var(--red);}
+  .rd-rotulo{display:block;font-size:11.5px;color:var(--ink-soft);white-space:nowrap;}
+  .rd-valor{display:block;font-size:14.5px;font-weight:700;font-variant-numeric:tabular-nums;}
+  .rd-valor-receita{color:var(--green);}
+  .rd-valor-despesa{color:var(--red);}
+  .rd-comparativo{font-size:10px;font-weight:700;}
+  .rd-comparativo.positivo{color:var(--green);}
+  .rd-comparativo.negativo{color:var(--red);}
 
   .subrow{
     display:flex;
@@ -1067,7 +1086,26 @@
     </div>
     <div class="saldo-linha">
       <span class="saldo-titulo">Sobra combinada</span>
-      <span id="saldoGeral" class="saldo-valor">R$ 0,00</span>
+      <span class="saldo-linha-direita">
+        <span id="saldoGeral" class="saldo-valor">R$ 0,00</span>
+        <button class="btn-olho" id="btnOlhoValores" title="Mostrar/ocultar valores" aria-label="Mostrar ou ocultar valores">👁</button>
+      </span>
+    </div>
+    <div class="rd-linha">
+      <div class="rd-item">
+        <span class="rd-icone rd-receita">↑</span>
+        <span>
+          <span class="rd-rotulo">Receitas <span class="rd-comparativo" id="rdCompReceitas"></span></span>
+          <span class="rd-valor rd-valor-receita" id="rdReceitas">R$ 0,00</span>
+        </span>
+      </div>
+      <div class="rd-item">
+        <span class="rd-icone rd-despesa">↓</span>
+        <span>
+          <span class="rd-rotulo">Despesas <span class="rd-comparativo" id="rdCompDespesas"></span></span>
+          <span class="rd-valor rd-valor-despesa" id="rdDespesas">R$ 0,00</span>
+        </span>
+      </div>
     </div>
     <div class="subrow">
       <div class="chip"><span class="dot p1"></span><span id="chipP1">R$ 0,00</span></div>
@@ -1613,6 +1651,13 @@
     v = Number(v) || 0;
     return v.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
   }
+  function textoComparativo(atual, anterior){
+    if(!anterior) return null;
+    const diffPct = ((atual - anterior) / anterior) * 100;
+    if(Math.abs(diffPct) < 1) return null;
+    const seta = diffPct > 0 ? '▲' : '▼';
+    return { texto: `${seta}${Math.abs(Math.round(diffPct))}%`, subiu: diffPct > 0 };
+  }
   // ---------- entrada de valores em reais (aceita vírgula, formata bonitinho ao sair do campo) ----------
   function paraNumero(str){
     if(typeof str === 'number') return str;
@@ -1877,6 +1922,16 @@
     salvar();
   });
 
+  document.getElementById('btnOlhoValores').addEventListener('click', ()=>{
+    const oculto = document.querySelector('header').classList.toggle('valores-ocultos');
+    try{ localStorage.setItem('controle-de-gastos-valores-ocultos', oculto ? '1' : '0'); }catch(e){}
+    document.getElementById('btnOlhoValores').textContent = oculto ? '🙈' : '👁';
+  });
+  if(localStorage.getItem('controle-de-gastos-valores-ocultos') === '1'){
+    document.querySelector('header').classList.add('valores-ocultos');
+    document.getElementById('btnOlhoValores').textContent = '🙈';
+  }
+
   function aplicarTemaAba(aba){
     document.body.classList.remove('tema-p1','tema-p2','tema-metas','tema-historico');
     if(aba==='p1') document.body.classList.add('tema-p1');
@@ -2109,6 +2164,30 @@
 
     document.getElementById('chipP1').textContent = `${estado.nomes.p1} ${formatarMoeda(sobraP1)}`;
     document.getElementById('chipP2').textContent = `${estado.nomes.p2} ${formatarMoeda(sobraP2)}`;
+
+    const receitasTotais = salP1 + salP2;
+    const despesasTotais = totalPessoa(p1) + totalPessoa(p2);
+    document.getElementById('rdReceitas').textContent = formatarMoeda(receitasTotais);
+    document.getElementById('rdDespesas').textContent = formatarMoeda(despesasTotais);
+
+    const mesAnteriorDados = estado.meses[deslocarMes(estado.mesAtual, -1)];
+    const compReceitasEl = document.getElementById('rdCompReceitas');
+    const compDespesasEl = document.getElementById('rdCompDespesas');
+    if(mesAnteriorDados){
+      const receitasAnt = rendaPessoa(mesAnteriorDados.p1) + rendaPessoa(mesAnteriorDados.p2);
+      const despesasAnt = totalPessoa(mesAnteriorDados.p1) + totalPessoa(mesAnteriorDados.p2);
+      const compR = textoComparativo(receitasTotais, receitasAnt);
+      const compD = textoComparativo(despesasTotais, despesasAnt);
+      compReceitasEl.textContent = compR ? compR.texto : '';
+      compReceitasEl.title = 'em relação ao mês passado';
+      compReceitasEl.className = 'rd-comparativo ' + (compR ? (compR.subiu ? 'positivo' : 'negativo') : '');
+      compDespesasEl.textContent = compD ? compD.texto : '';
+      compDespesasEl.title = 'em relação ao mês passado';
+      compDespesasEl.className = 'rd-comparativo ' + (compD ? (compD.subiu ? 'negativo' : 'positivo') : '');
+    } else {
+      compReceitasEl.textContent = '';
+      compDespesasEl.textContent = '';
+    }
 
     document.getElementById('resumoNomeP1').textContent = estado.nomes.p1;
     document.getElementById('resumoNomeP2').textContent = estado.nomes.p2;
@@ -2678,14 +2757,14 @@
         linha.classList.add('swipe-transicao');
         if(est.ehSwipe){
           const total = est.offsetInicial + est.deltaX;
-          if(total <= -LONGE){
-            linha.style.transform = `translateX(-100%)`;
-            const btn = wrap.querySelector('.btn-remover-swipe');
-            const {pessoa, idx} = btn ? btn.dataset : {};
-            setTimeout(()=>{ if(pessoa!==undefined) removerGasto(pessoa, idx); }, 140);
-          } else if(total <= -ABRIR){
+          if(total <= -ABRIR){
             wrap.classList.add('swipe-aberta');
             linha.style.transform = `translateX(-${REVEAL}px)`;
+            if(total <= -LONGE){
+              // arrasto bem longo já abre direto a confirmação, mas nunca apaga sem perguntar
+              const btn = wrap.querySelector('.btn-remover-swipe');
+              if(btn) btn.click();
+            }
           } else {
             wrap.classList.remove('swipe-aberta');
             linha.style.transform = '';
