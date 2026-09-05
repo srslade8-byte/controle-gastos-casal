@@ -1693,8 +1693,8 @@
     return "R$ " + v.toLocaleString('pt-BR',{maximumFractionDigits:0});
   }
 
-  function totalPessoa(p){ return p.gastos.reduce((s,i)=>s+(Number(i.valor)||0),0); }
-  function totalPessoaSaldo(p){ return p.gastos.reduce((s,i)=> i.origemMeta ? s : s+(Number(i.valor)||0),0); }
+  function totalPessoa(p){ return p.gastos.reduce((s,i)=> i.pago ? s+(Number(i.valor)||0) : s,0); }
+  function totalPessoaSaldo(p){ return p.gastos.reduce((s,i)=> (i.pago && !i.origemMeta) ? s+(Number(i.valor)||0) : s,0); }
   function rendaPessoa(p){ return (Number(p.salario)||0) + (Number(p.rendaExtra)||0); }
   function investimentoPessoaMes(chavePessoa, chaveM=estado.mesAtual){
     return (estado.metas||[]).reduce((s,m)=>{
@@ -2306,13 +2306,13 @@
     let contP1=0, contP2=0;
     p1.gastos.forEach(it=>{
       const v = Number(it.valor)||0;
-      if(v<=0) return;
+      if(v<=0 || !it.pago) return;
       itens.push({ nome: it.categoria, valor: v, cor: PALETA_P1[contP1 % PALETA_P1.length] });
       contP1++;
     });
     p2.gastos.forEach(it=>{
       const v = Number(it.valor)||0;
-      if(v<=0) return;
+      if(v<=0 || !it.pago) return;
       itens.push({ nome: it.categoria, valor: v, cor: PALETA_P2[contP2 % PALETA_P2.length] });
       contP2++;
     });
