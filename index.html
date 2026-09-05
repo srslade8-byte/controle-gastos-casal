@@ -1694,6 +1694,7 @@
   }
 
   function totalPessoa(p){ return p.gastos.reduce((s,i)=> i.pago ? s+(Number(i.valor)||0) : s,0); }
+  function totalPessoaTudo(p){ return p.gastos.reduce((s,i)=>s+(Number(i.valor)||0),0); }
   function totalPessoaSaldo(p){ return p.gastos.reduce((s,i)=> (i.pago && !i.origemMeta) ? s+(Number(i.valor)||0) : s,0); }
   function rendaPessoa(p){ return (Number(p.salario)||0) + (Number(p.rendaExtra)||0); }
   function investimentoPessoaMes(chavePessoa, chaveM=estado.mesAtual){
@@ -2100,7 +2101,7 @@
     html += `</div>
       <div class="total-row">
         <span class="total-label">Total de ${nome}</span>
-        <span class="total-valor">${formatarMoeda(totalPessoa(p))}</span>
+        <span class="total-valor">${formatarMoeda(totalPessoaTudo(p))}</span>
       </div>
 
       <button class="btn-add" data-abrir-form="${chave}">+ Adicionar categoria</button>
@@ -2466,11 +2467,11 @@
             </div>
           </div>
           <div class="meta-campo meta-campo-wide">
-            <label>Investimento no objetivo deste mês — Pessoa 1</label>
+            <label>Investimento no objetivo deste mês — ${estado.nomes.p1}</label>
             <div class="caixa"><span>R$</span><input type="text" inputmode="decimal" data-meta-id="${m.id}" data-meta-campo="contribuicaoMes" data-meta-pessoa="p1" value="${formatarValorInput(contribP1)}" placeholder="0,00"></div>
           </div>
           <div class="meta-campo meta-campo-wide">
-            <label>Investimento no objetivo deste mês — Pessoa 2</label>
+            <label>Investimento no objetivo deste mês — ${estado.nomes.p2}</label>
             <div class="caixa"><span>R$</span><input type="text" inputmode="decimal" data-meta-id="${m.id}" data-meta-campo="contribuicaoMes" data-meta-pessoa="p2" value="${formatarValorInput(contribP2)}" placeholder="0,00"></div>
           </div>
           <p class="mini-info">O valor deste mês será somado automaticamente ao que já está guardado.</p>
@@ -2849,7 +2850,7 @@
 
         const nomeView = pessoa === 'p1' ? 'P1' : 'P2';
         const totalEl = document.querySelector(`#view${nomeView} .total-valor`);
-        if(totalEl) totalEl.textContent = formatarMoeda(totalPessoa(dadosPessoa(pessoa)));
+        if(totalEl) totalEl.textContent = formatarMoeda(totalPessoaTudo(dadosPessoa(pessoa)));
         if(campo==='valor'){ renderResumo(); atualizarAvisoLinha(pessoa, idx); }
         salvar();
       };
