@@ -174,72 +174,45 @@
   .btn-icone:active{color:var(--accent);border-color:var(--accent);}
   .btn-icone svg{width:17px;height:17px;}
 
-  .saldo-linha{
-    display:flex;
-    align-items:baseline;
-    justify-content:space-between;
-    margin-top:4px;
-  }
-  .saldo-titulo{
-    font-family:'Fraunces',serif;
-    font-size:14.5px;
-    letter-spacing:.01em;
-    color:var(--ink-soft);
-  }
-  .saldo-valor{
-    font-family:'Fraunces',serif;
-    font-size:37px;
-    font-weight:600;
-    letter-spacing:-.015em;
-    font-variant-numeric:tabular-nums;
-  }
-  .saldo-valor.positivo{color:var(--green);}
-  .saldo-valor.negativo{color:var(--red);}
-  .saldo-linha-direita{display:flex;align-items:center;gap:8px;}
-  .btn-olho{border:none;background:var(--paper-deep);color:var(--ink-soft);width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;flex:none;}
-  .btn-olho:active{transform:scale(.9);}
-  .valores-ocultos .saldo-valor,
-  .valores-ocultos .rd-valor,
-  .valores-ocultos .chip span:not(.dot){filter:blur(7px);user-select:none;}
-
-  .rd-linha{display:flex;gap:14px;margin-top:14px;}
-  .rd-item{display:flex;align-items:center;gap:10px;flex:1;min-width:0;}
-  .rd-icone{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex:none;}
-  .rd-icone.rd-receita{background:var(--green-soft);color:var(--green);}
-  .rd-icone.rd-despesa{background:var(--red-soft);color:var(--red);}
-  .rd-rotulo{display:block;font-size:11.5px;color:var(--ink-soft);white-space:nowrap;}
-  .rd-valor{display:block;font-size:14.5px;font-weight:700;font-variant-numeric:tabular-nums;}
-  .rd-valor-receita{color:var(--green);}
-  .rd-valor-despesa{color:var(--red);}
+  .rd-hero{display:flex;gap:14px;margin-top:2px;}
+  .rd-hero-item{flex:1;min-width:0;}
+  .rd-hero-rotulo{display:block;font-size:12.5px;color:var(--ink-soft);font-weight:600;margin-bottom:2px;}
+  .rd-hero-valor{display:block;font-family:'Fraunces',serif;font-size:29px;font-weight:600;letter-spacing:-.01em;font-variant-numeric:tabular-nums;}
+  .rd-hero-valor-receita{color:var(--green);}
+  .rd-hero-valor-despesa{color:var(--red);font-size:22px;}
   .rd-comparativo{font-size:10px;font-weight:700;}
   .rd-comparativo.positivo{color:var(--green);}
   .rd-comparativo.negativo{color:var(--red);}
 
-  .link-por-pessoa{border:none;background:none;color:var(--ink-soft);font-size:11px;font-weight:600;text-decoration:underline;text-underline-offset:2px;padding:8px 0 0;cursor:pointer;display:block;}
-  .rd-por-pessoa{display:flex;gap:10px;margin-top:10px;}
-  .rd-pessoa-bloco{flex:1;min-width:0;background:var(--white);border:1px solid var(--line);border-radius:12px;padding:10px 12px;}
-  .rd-pessoa-nome{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--ink);margin:0 0 6px;}
-  .rd-pessoa-linha{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink-soft);padding:2px 0;}
-  .rd-pessoa-linha span:last-child{font-weight:700;font-variant-numeric:tabular-nums;}
+  .saldo-linha-mini{display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px dashed var(--line);}
+  .saldo-titulo-mini{font-size:12px;color:var(--ink-soft);}
+  .saldo-valor-mini{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;}
+  .saldo-valor-mini.positivo{color:var(--green);}
+  .saldo-valor-mini.negativo{color:var(--red);}
+  .saldo-linha-direita{display:flex;align-items:center;gap:8px;}
+  .btn-olho{border:none;background:var(--paper-deep);color:var(--ink-soft);width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;flex:none;}
+  .btn-olho:active{transform:scale(.9);}
+  .valores-ocultos .saldo-valor-mini,
+  .valores-ocultos .rd-hero-valor,
+  .valores-ocultos .pessoa-card-saldo,
+  .valores-ocultos .pessoa-card-saldo-grande,
+  .valores-ocultos .pessoa-card-linha span:last-child{filter:blur(7px);user-select:none;}
 
-  .subrow{
-    display:flex;
-    gap:10px;
-    margin-top:14px;
-    font-size:12.5px;
-  }
-  .chip{
-    display:flex;
-    align-items:center;
-    gap:7px;
-    color:var(--ink);
-    font-weight:600;
-    background:var(--white);
-    border:1px solid var(--line);
-    padding:7px 13px 7px 10px;
-    border-radius:30px;
-    box-shadow:var(--shadow-soft);
-  }
+  .pessoas-cards{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
+  .pessoa-card-wrap{background:var(--white);border:1px solid var(--line);border-radius:14px;overflow:hidden;}
+  .pessoa-card-topo{width:100%;display:flex;align-items:center;gap:8px;border:none;background:none;padding:11px 13px;cursor:pointer;font-family:inherit;color:var(--ink);}
+  .pessoa-card-id{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;flex:1;min-width:0;text-align:left;}
+  .pessoa-card-saldo{font-size:13.5px;font-weight:700;font-variant-numeric:tabular-nums;}
+  .pessoa-card-seta{color:var(--ink-soft);font-size:15px;transition:transform .2s ease;flex:none;}
+  .pessoa-card-topo.aberto .pessoa-card-seta{transform:rotate(90deg);}
+  .pessoa-card-detalhe{padding:0 13px 14px;}
+  .pessoa-card-linha{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-soft);padding:3px 0;}
+  .pessoa-card-linha span:last-child{font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink);}
+  .pessoa-card-rotulo-grande{font-size:11px;color:var(--ink-soft);margin:10px 0 0;}
+  .pessoa-card-saldo-grande{font-family:'Fraunces',serif;font-size:30px;font-weight:600;margin:2px 0 0;font-variant-numeric:tabular-nums;}
+  .pessoa-card-saldo.positivo,.pessoa-card-saldo-grande.positivo{color:var(--green);}
+  .pessoa-card-saldo.negativo,.pessoa-card-saldo-grande.negativo{color:var(--red);}
+
   .dot{width:8px;height:8px;border-radius:50%;flex:none;box-shadow:0 0 0 3px color-mix(in srgb, currentColor 18%, transparent);}
   .dot.p1{background:var(--matheus);color:var(--matheus);}
   .dot.p2{background:var(--andreia);color:var(--andreia);}
@@ -344,14 +317,20 @@
   .linha-gasto.swipe-arrastando{transition:none;}
   .linha-gasto.swipe-transicao{transition:transform .22s cubic-bezier(.22,.8,.32,1);}
   .linha-gasto-info{min-width:0;}
-  .linha-gasto.paga{opacity:.5;}
-  .linha-gasto.paga .categoria-nome,
+  .linha-gasto.paga .categoria-nome-input,
+  .linha-gasto.paga .categoria-icone,
+  .linha-gasto.paga .valor-input,
+  .linha-gasto.paga .badge-fixo,
+  .linha-gasto.paga .badge-parcela,
+  .linha-gasto.paga .badge-pagamento,
+  .linha-gasto.paga .valor-input-wrap span{opacity:.5;}
+  .linha-gasto.paga .categoria-nome-input,
   .linha-gasto.paga .categoria-desc-input{text-decoration:line-through;}
 
   .swipe-fundo{
     position:absolute;
     inset:0;
-    background:var(--red);
+    background:#B0392A;
     display:flex;
     align-items:stretch;
     justify-content:flex-end;
@@ -1091,45 +1070,50 @@
         </button>
       </div>
     </div>
-    <div class="saldo-linha">
-      <span class="saldo-titulo">Sobra combinada</span>
+    <div class="rd-hero">
+      <div class="rd-hero-item">
+        <span class="rd-hero-rotulo">↑ Receitas <span class="rd-comparativo" id="rdCompReceitas"></span></span>
+        <span class="rd-hero-valor rd-hero-valor-receita" id="rdReceitas">R$ 0,00</span>
+      </div>
+      <div class="rd-hero-item">
+        <span class="rd-hero-rotulo">↓ Despesas <span class="rd-comparativo" id="rdCompDespesas"></span></span>
+        <span class="rd-hero-valor rd-hero-valor-despesa" id="rdDespesas">R$ 0,00</span>
+      </div>
+    </div>
+    <div class="saldo-linha-mini">
+      <span class="saldo-titulo-mini">Sobra combinada</span>
       <span class="saldo-linha-direita">
-        <span id="saldoGeral" class="saldo-valor">R$ 0,00</span>
+        <span id="saldoGeral" class="saldo-valor-mini">R$ 0,00</span>
         <button class="btn-olho" id="btnOlhoValores" title="Mostrar/ocultar valores" aria-label="Mostrar ou ocultar valores">👁</button>
       </span>
     </div>
-    <div class="rd-linha">
-      <div class="rd-item">
-        <span class="rd-icone rd-receita">↑</span>
-        <span>
-          <span class="rd-rotulo">Receitas <span class="rd-comparativo" id="rdCompReceitas"></span></span>
-          <span class="rd-valor rd-valor-receita" id="rdReceitas">R$ 0,00</span>
-        </span>
+    <div class="pessoas-cards">
+      <div class="pessoa-card-wrap">
+        <button type="button" class="pessoa-card-topo" id="pcBtnP1" data-pessoa-card="p1">
+          <span class="pessoa-card-id"><span class="dot p1"></span><span id="pcNomeP1">Pessoa 1</span></span>
+          <span class="pessoa-card-saldo" id="pcSaldoP1">R$ 0,00</span>
+          <span class="pessoa-card-seta">›</span>
+        </button>
+        <div class="pessoa-card-detalhe oculto" id="pcDetalheP1">
+          <div class="pessoa-card-linha"><span>Receitas</span><span id="pcReceitasP1">R$ 0,00</span></div>
+          <div class="pessoa-card-linha"><span>Despesas</span><span id="pcDespesasP1">R$ 0,00</span></div>
+          <p class="pessoa-card-rotulo-grande">Ainda sobra</p>
+          <p class="pessoa-card-saldo-grande" id="pcSaldoGrandeP1">R$ 0,00</p>
+        </div>
       </div>
-      <div class="rd-item">
-        <span class="rd-icone rd-despesa">↓</span>
-        <span>
-          <span class="rd-rotulo">Despesas <span class="rd-comparativo" id="rdCompDespesas"></span></span>
-          <span class="rd-valor rd-valor-despesa" id="rdDespesas">R$ 0,00</span>
-        </span>
+      <div class="pessoa-card-wrap">
+        <button type="button" class="pessoa-card-topo" id="pcBtnP2" data-pessoa-card="p2">
+          <span class="pessoa-card-id"><span class="dot p2"></span><span id="pcNomeP2">Pessoa 2</span></span>
+          <span class="pessoa-card-saldo" id="pcSaldoP2">R$ 0,00</span>
+          <span class="pessoa-card-seta">›</span>
+        </button>
+        <div class="pessoa-card-detalhe oculto" id="pcDetalheP2">
+          <div class="pessoa-card-linha"><span>Receitas</span><span id="pcReceitasP2">R$ 0,00</span></div>
+          <div class="pessoa-card-linha"><span>Despesas</span><span id="pcDespesasP2">R$ 0,00</span></div>
+          <p class="pessoa-card-rotulo-grande">Ainda sobra</p>
+          <p class="pessoa-card-saldo-grande" id="pcSaldoGrandeP2">R$ 0,00</p>
+        </div>
       </div>
-    </div>
-    <button class="link-por-pessoa" id="btnRdPorPessoa">ver por pessoa</button>
-    <div class="rd-por-pessoa oculto" id="rdPorPessoa">
-      <div class="rd-pessoa-bloco">
-        <p class="rd-pessoa-nome"><span class="dot p1"></span><span id="rdNomeP1">Pessoa 1</span></p>
-        <div class="rd-pessoa-linha"><span>Receitas</span><span class="rd-valor-receita" id="rdReceitasP1">R$ 0,00</span></div>
-        <div class="rd-pessoa-linha"><span>Despesas</span><span class="rd-valor-despesa" id="rdDespesasP1">R$ 0,00</span></div>
-      </div>
-      <div class="rd-pessoa-bloco">
-        <p class="rd-pessoa-nome"><span class="dot p2"></span><span id="rdNomeP2">Pessoa 2</span></p>
-        <div class="rd-pessoa-linha"><span>Receitas</span><span class="rd-valor-receita" id="rdReceitasP2">R$ 0,00</span></div>
-        <div class="rd-pessoa-linha"><span>Despesas</span><span class="rd-valor-despesa" id="rdDespesasP2">R$ 0,00</span></div>
-      </div>
-    </div>
-    <div class="subrow">
-      <div class="chip"><span class="dot p1"></span><span id="chipP1">R$ 0,00</span></div>
-      <div class="chip"><span class="dot p2"></span><span id="chipP2">R$ 0,00</span></div>
     </div>
   </header>
 
@@ -1952,10 +1936,13 @@
     document.getElementById('btnOlhoValores').textContent = '🙈';
   }
 
-  document.getElementById('btnRdPorPessoa').addEventListener('click', ()=>{
-    const bloco = document.getElementById('rdPorPessoa');
-    const aberto = bloco.classList.toggle('oculto') === false;
-    document.getElementById('btnRdPorPessoa').textContent = aberto ? 'ocultar por pessoa' : 'ver por pessoa';
+  document.querySelectorAll('.pessoa-card-topo').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const chave = btn.dataset.pessoaCard;
+      const detalhe = document.getElementById(chave === 'p1' ? 'pcDetalheP1' : 'pcDetalheP2');
+      const aberto = detalhe.classList.toggle('oculto') === false;
+      btn.classList.toggle('aberto', aberto);
+    });
   });
 
   function aplicarTemaAba(aba){
@@ -2186,10 +2173,26 @@
 
     const saldoEl = document.getElementById('saldoGeral');
     saldoEl.textContent = formatarMoeda(sobraGeral);
-    saldoEl.className = "saldo-valor " + (sobraGeral < 0 ? "negativo" : "positivo");
+    saldoEl.className = "saldo-valor-mini " + (sobraGeral < 0 ? "negativo" : "positivo");
 
-    document.getElementById('chipP1').textContent = `${estado.nomes.p1} ${formatarMoeda(sobraP1)}`;
-    document.getElementById('chipP2').textContent = `${estado.nomes.p2} ${formatarMoeda(sobraP2)}`;
+    document.getElementById('pcNomeP1').textContent = estado.nomes.p1;
+    document.getElementById('pcNomeP2').textContent = estado.nomes.p2;
+    const pcSaldoP1El = document.getElementById('pcSaldoP1');
+    pcSaldoP1El.textContent = formatarMoeda(sobraP1);
+    pcSaldoP1El.className = "pessoa-card-saldo " + (sobraP1 < 0 ? "negativo" : "positivo");
+    const pcSaldoP2El = document.getElementById('pcSaldoP2');
+    pcSaldoP2El.textContent = formatarMoeda(sobraP2);
+    pcSaldoP2El.className = "pessoa-card-saldo " + (sobraP2 < 0 ? "negativo" : "positivo");
+    document.getElementById('pcReceitasP1').textContent = formatarMoeda(salP1);
+    document.getElementById('pcDespesasP1').textContent = formatarMoeda(totalPessoa(p1));
+    document.getElementById('pcReceitasP2').textContent = formatarMoeda(salP2);
+    document.getElementById('pcDespesasP2').textContent = formatarMoeda(totalPessoa(p2));
+    const pcSaldoGrandeP1El = document.getElementById('pcSaldoGrandeP1');
+    pcSaldoGrandeP1El.textContent = formatarMoeda(sobraP1);
+    pcSaldoGrandeP1El.className = "pessoa-card-saldo-grande " + (sobraP1 < 0 ? "negativo" : "positivo");
+    const pcSaldoGrandeP2El = document.getElementById('pcSaldoGrandeP2');
+    pcSaldoGrandeP2El.textContent = formatarMoeda(sobraP2);
+    pcSaldoGrandeP2El.className = "pessoa-card-saldo-grande " + (sobraP2 < 0 ? "negativo" : "positivo");
 
     const receitasTotais = salP1 + salP2;
     const despesasTotais = totalPessoa(p1) + totalPessoa(p2);
@@ -2214,13 +2217,6 @@
       compReceitasEl.textContent = '';
       compDespesasEl.textContent = '';
     }
-
-    document.getElementById('rdNomeP1').textContent = estado.nomes.p1;
-    document.getElementById('rdNomeP2').textContent = estado.nomes.p2;
-    document.getElementById('rdReceitasP1').textContent = formatarMoeda(salP1);
-    document.getElementById('rdDespesasP1').textContent = formatarMoeda(totalPessoa(p1));
-    document.getElementById('rdReceitasP2').textContent = formatarMoeda(salP2);
-    document.getElementById('rdDespesasP2').textContent = formatarMoeda(totalPessoa(p2));
 
     document.getElementById('resumoNomeP1').textContent = estado.nomes.p1;
     document.getElementById('resumoNomeP2').textContent = estado.nomes.p2;
