@@ -2303,21 +2303,25 @@
   }
 
   function listaItensCategorias(p1, p2){
-    const itens = [];
-    let contP1=0, contP2=0;
-    p1.gastos.forEach(it=>{
+    const paletaCombinada = [...PALETA_P1, ...PALETA_P2];
+    const mapa = new Map();
+    let contCor = 0;
+    function somar(it){
       const v = Number(it.valor)||0;
       if(v<=0 || !it.pago) return;
-      itens.push({ nome: it.categoria, valor: v, cor: PALETA_P1[contP1 % PALETA_P1.length] });
-      contP1++;
-    });
-    p2.gastos.forEach(it=>{
-      const v = Number(it.valor)||0;
-      if(v<=0 || !it.pago) return;
-      itens.push({ nome: it.categoria, valor: v, cor: PALETA_P2[contP2 % PALETA_P2.length] });
-      contP2++;
-    });
-    return itens;
+      const nome = (it.categoria||'').trim();
+      if(!nome) return;
+      const chave = nome.toLowerCase();
+      if(mapa.has(chave)){
+        mapa.get(chave).valor += v;
+      } else {
+        mapa.set(chave, { nome, valor: v, cor: paletaCombinada[contCor % paletaCombinada.length] });
+        contCor++;
+      }
+    }
+    p1.gastos.forEach(somar);
+    p2.gastos.forEach(somar);
+    return Array.from(mapa.values());
   }
 
   function renderCategorias(p1, p2){
