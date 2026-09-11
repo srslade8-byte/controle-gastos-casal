@@ -907,6 +907,7 @@
   /* categoria: nome + selos */
   .categoria-nome-linha{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
   .badge-fixo{font-size:11px;}
+  .badge-ate{font-size:10px;font-weight:600;background:var(--paper-deep);color:var(--ink-soft);padding:3px 8px;border-radius:8px;white-space:nowrap;}
   .badge-parcela{font-size:10px;font-weight:600;background:var(--paper-deep);color:var(--ink-soft);padding:3px 8px;border-radius:8px;}
   .badge-parcela.ultima{background:var(--red-soft);color:var(--red);font-weight:700;}
 
@@ -1016,6 +1017,14 @@
   .atividade-item:last-child{border-bottom:none;}
   .atividade-quando{font-size:11px;color:var(--ink-soft);margin-top:3px;}
   .atividade-valor{font-size:13px;font-weight:700;white-space:nowrap;}
+  .programada-item{padding:12px 0;border-bottom:1px dashed var(--line);}
+  .programada-item:last-child{border-bottom:none;}
+  .programada-topo{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .programada-nome{display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:700;color:var(--ink);}
+  .programada-valor{font-size:12.5px;font-weight:700;color:var(--ink-soft);}
+  .programada-status{font-size:11.5px;color:var(--ink-soft);margin-top:3px;}
+  .programada-status.fixa{color:var(--gold);}
+  .btn-parar-recorrencia{margin-top:8px;border:none;background:none;color:var(--red);font-size:12px;font-weight:600;text-decoration:underline;text-underline-offset:2px;cursor:pointer;padding:0;}
   @media (min-width:700px){#app{box-shadow:0 0 44px rgba(0,0,0,.14);}.drawer{left:calc(50% - 230px);}}
 
 </style>
@@ -1040,6 +1049,7 @@
       <button class="drawer-action" id="drawerBackup"><span class="icone">☁</span>Backup e importar/exportar</button>
       <button class="drawer-action" id="drawerSync"><span class="icone">👫</span>Conectar com parceiro(a)</button>
       <button class="drawer-action" id="drawerAtividades"><span class="icone">🕘</span>Atividades recentes</button>
+      <button class="drawer-action" id="drawerProgramadas"><span class="icone">🗓️</span>Categorias programadas</button>
       <button class="drawer-action" id="drawerShare"><span class="icone">↗</span>Compartilhar o app</button>
     </div>
     <div class="drawer-section">
@@ -1395,6 +1405,15 @@
   </div>
 </div>
 
+<div class="confirm-overlay oculto" id="modalProgramadas">
+  <div class="confirm-box">
+    <h3>Categorias programadas</h3>
+    <p style="font-size:13px;color:var(--ink-soft);margin:0 0 10px;">Gastos fixos e programados para repetir além deste mês.</p>
+    <div id="listaProgramadas" style="max-height:55vh;overflow-y:auto;"></div>
+    <div class="confirm-botoes"><button id="fecharModalProgramadas" style="flex:1;">Fechar</button></div>
+  </div>
+</div>
+
 <div class="confirm-overlay oculto" id="modalEditarPagamento">
   <div class="confirm-box">
     <h3>Forma de pagamento</h3>
@@ -1439,6 +1458,7 @@
   function rotuloMes(chave){ const [a,m]=chave.split("-").map(Number); return MESES_NOMES[m-1]+" "+a; }
   function rotuloMesCurto(chave){ const [a,m]=chave.split("-").map(Number); return MESES_CURTO[m-1]+"/"+String(a).slice(2); }
   function deslocarMes(chave, delta){ const [a,m]=chave.split("-").map(Number); const d=new Date(a, (m-1)+delta, 1); return chaveMes(d); }
+  function mesesEntre(inicio, fim){ const [ai,mi]=inicio.split("-").map(Number); const [af,mf]=fim.split("-").map(Number); return (af-ai)*12 + (mf-mi) + 1; }
 
   function dadosMesPadrao(){
     return {
@@ -1462,6 +1482,7 @@
       paleta: "original",
       historicoBackup: [],
       atividades: [],
+      recorrenciasEncerradas: [],
       graficoComparativoTipo: "barras",
       graficoCategoriasTipo: "rosca",
       graficoHistoricoTipo: "gastos"
@@ -1651,6 +1672,35 @@
     }).join('');
   }
 
+  function renderProgramadas(){
+    const cont = document.getElementById('listaProgramadas');
+    if(!cont) return;
+    const itens = [];
+    ['p1','p2'].forEach(pk=>{
+      const pessoa = dadosPessoa(pk);
+      pessoa.gastos.forEach(it=>{
+        if(it.fixo && it.fixoId){
+          itens.push({ pessoa: estado.nomes[pk], categoria: it.categoria, valor: it.valor, status:'Fixa — repete todo mês até você remover', fixa:true, id: it.fixoId, podeParar:true });
+        } else if(it.ateFim && it.ateId){
+          const termina = it.ateFim === estado.mesAtual;
+          itens.push({ pessoa: estado.nomes[pk], categoria: it.categoria, valor: it.valor, status: termina ? 'Termina neste mês' : `Programada até ${rotuloMes(it.ateFim)}`, fixa:false, id: it.ateId, podeParar: !termina });
+        }
+      });
+    });
+    if(itens.length === 0){
+      cont.innerHTML = '<p class="card-sub" style="margin:10px 0;">Nenhuma categoria fixa ou programada além deste mês.</p>';
+      return;
+    }
+    cont.innerHTML = itens.map(it=>`<div class="programada-item">
+      <div class="programada-topo">
+        <span class="programada-nome">${it.categoria} <span style="font-weight:400;color:var(--ink-soft);">— ${it.pessoa}</span></span>
+        <span class="programada-valor">${formatarMoeda(it.valor)}</span>
+      </div>
+      <div class="programada-status ${it.fixa?'fixa':''}">${it.status}</div>
+      ${it.podeParar ? `<button class="btn-parar-recorrencia" data-parar-recorrencia="${it.id}">Remover dos próximos meses</button>` : ''}
+    </div>`).join('');
+  }
+
   function formatarMoeda(v){
     v = Number(v) || 0;
     return v.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
@@ -1781,24 +1831,47 @@
     const anteriores = Object.keys(estado.meses).filter(c=>c<chave).sort();
     return anteriores.length ? anteriores[anteriores.length-1] : null;
   }
+  function recorrenciaEncerrada(id, chaveAlvo){
+    return (estado.recorrenciasEncerradas||[]).some(r=>r.id===id && chaveAlvo>r.apos);
+  }
+  function pararRecorrencia(id){
+    if(!estado.recorrenciasEncerradas) estado.recorrenciasEncerradas = [];
+    estado.recorrenciasEncerradas.push({ id, apos: estado.mesAtual });
+    Object.keys(estado.meses).filter(c=>c>estado.mesAtual).forEach(chaveMes=>{
+      ['p1','p2'].forEach(pk=>{
+        const pessoa = estado.meses[chaveMes][pk];
+        pessoa.gastos = pessoa.gastos.filter(it => it.fixoId!==id && it.ateId!==id);
+      });
+    });
+  }
   function criarMesComBase(chave){
     const base = mesAnteriorExistente(chave);
     if(!base) return dadosMesPadrao();
     const bd = estado.meses[base];
     function copiarPessoa(p){
-      return { salario:0, rendaExtra: Number(p.rendaExtra)||0, gastos: p.gastos.map(it => ({
-        categoria: it.categoria,
-        descricao: it.fixo ? (it.descricao||'') : '',
-        valor: it.fixo ? (it.valor||0) : 0,
-        limite: it.limite||0,
-        parcela: '',
-        fixo: !!it.fixo,
-        pagamento: it.fixo ? (it.pagamento||'') : '',
-        origemMeta: '',
-        retiradaId: '',
-        fixoId: it.fixo ? (it.fixoId||'') : '',
-        pago: false
-      })) };
+      const gastos = [];
+      p.gastos.forEach(it=>{
+        // só gastos fixos se repetem sozinhos; "somente este mês" e "até um mês"
+        // (esse já é criado de uma vez, em todos os meses, no momento do lançamento) não voltam a aparecer.
+        if(!it.fixo || !it.fixoId) return;
+        if(recorrenciaEncerrada(it.fixoId, chave)) return;
+        gastos.push({
+          categoria: it.categoria,
+          descricao: it.descricao||'',
+          valor: it.valor||0,
+          limite: it.limite||0,
+          parcela: '',
+          fixo: true,
+          pagamento: it.pagamento||'',
+          origemMeta: '',
+          retiradaId: '',
+          fixoId: it.fixoId,
+          ateId: '',
+          ateFim: '',
+          pago: false
+        });
+      });
+      return { salario:0, rendaExtra: Number(p.rendaExtra)||0, gastos };
     }
     return { p1: copiarPessoa(bd.p1), p2: copiarPessoa(bd.p2) };
   }
@@ -1809,6 +1882,7 @@
   function propagarGastoFixo(chavePessoa, itemBase){
     if(!itemBase.fixo || !itemBase.fixoId) return;
     Object.keys(estado.meses).filter(c=>c>estado.mesAtual).forEach(mes=>{
+      if(recorrenciaEncerrada(itemBase.fixoId, mes)) return;
       const pessoa = obterMes(mes)[chavePessoa];
       const existente = pessoa.gastos.find(item=>item.fixoId===itemBase.fixoId);
       if(!existente) pessoa.gastos.push({...itemBase, valor:itemBase.valor, parcela:''});
@@ -1871,6 +1945,7 @@
     if(!obj.paleta) obj.paleta = "original";
     if(!obj.historicoBackup) obj.historicoBackup = [];
     if(!obj.atividades) obj.atividades = [];
+    if(!obj.recorrenciasEncerradas) obj.recorrenciasEncerradas = [];
     Object.values(obj.meses||{}).forEach(m=>{ ["p1","p2"].forEach(k=>{ if(m[k]) { if(m[k].rendaExtra===undefined) m[k].rendaExtra=0; if(m[k].investimentoObjetivo===undefined) m[k].investimentoObjetivo=0; } }); });
     if(!obj.graficoComparativoTipo) obj.graficoComparativoTipo = "barras";
     if(!obj.graficoCategoriasTipo) obj.graficoCategoriasTipo = "rosca";
@@ -1881,6 +1956,8 @@
         if(item.pagamento===undefined){ item.pagamento = item.cartao ? 'credito' : ''; }
         delete item.cartao;
         if(item.pago===undefined) item.pago = false;
+        if(item.ateId===undefined) item.ateId = '';
+        if(item.ateFim===undefined) item.ateFim = '';
       });
     }); });
     return obj;
@@ -2068,6 +2145,7 @@
           <div class="categoria-nome-linha">
             <span class="categoria-icone" title="${item.categoria}">${iconeCategoria(item.categoria)}</span><input type="text" class="categoria-nome-input" data-pessoa="${chave}" data-idx="${i}" data-campo="categoria" value="${item.categoria}">
             <span class="badge-fixo ${item.fixo?'':'oculto'}" id="badge-fixo-${chave}-${i}" title="Repete todo mês">📌</span>
+            <span class="badge-ate ${item.ateFim?'':'oculto'}" title="Repete até ${item.ateFim?rotuloMes(item.ateFim):''}">🗓️ até ${item.ateFim?rotuloMesCurto(item.ateFim):''}</span>
             <span class="badge-parcela ${infoP?'':'oculto'} ${infoP&&infoP.ultima?'ultima':''}" id="badge-parcela-${chave}-${i}">${infoP?infoP.texto:''}</span>
             <span class="badge-pagamento-wrap"><button type="button" class="badge-pagamento ${infoPg?infoPg.classe:'vazio'}" data-editar-pagamento="${chave}" data-idx="${i}" title="Alterar forma de pagamento"><span class="emoji">${infoPg?infoPg.emoji:'💰'}</span>${infoPg?infoPg.texto:'Pagamento'}</button></span>
           </div>
@@ -2116,9 +2194,17 @@
         <label>Tipo de gasto</label>
         <select id="novoTipoGasto-${chave}" class="select-pagamento" data-tipo-gasto-select="${chave}">
           <option value="mes">Somente neste mês</option>
-          <option value="fixo">Gasto fixo</option>
+          <option value="ate">Repetir até um mês específico</option>
+          <option value="fixo">Gasto fixo (sem data pra parar)</option>
         </select>
-        <small class="mini-info">Gastos fixos aparecem automaticamente nos próximos meses e podem ser alterados separadamente.</small>
+        <small class="mini-info">Gastos fixos aparecem automaticamente nos próximos meses até você removê-los. "Somente neste mês" nunca volta a aparecer sozinho.</small>
+        <div class="campo-parcelas oculto" id="campoAteFim-${chave}">
+          <label>Repetir até qual mês?</label>
+          <select id="novoAteFim-${chave}">
+            ${Array.from({length:25},(_,i)=>deslocarMes(estado.mesAtual,i)).map(c=>`<option value="${c}">${rotuloMes(c)}</option>`).join('')}
+          </select>
+          <small class="mini-info">O mesmo valor será lançado em todos os meses, do atual até o escolhido.</small>
+        </div>
         <label>Forma de pagamento</label>
         <div class="pagamento-grupo" data-pagamento-grupo="${chave}">
           <button type="button" class="pagamento-opcao ativa" data-pagamento-btn="${chave}" data-pagamento-valor="dinheiro"><span class="pagamento-emoji">💵</span><span>Dinheiro</span></button>
@@ -2952,6 +3038,19 @@
       };
     });
 
+    document.querySelectorAll('[data-tipo-gasto-select]').forEach(sel=>{
+      sel.onchange = e=>{
+        const chaveSel = e.target.dataset.tipoGastoSelect;
+        const campoAte = document.getElementById('campoAteFim-'+chaveSel);
+        if(campoAte) campoAte.classList.toggle('oculto', e.target.value !== 'ate');
+        // parcelamento no crédito só faz sentido pra "somente este mês"
+        if(e.target.value !== 'mes'){
+          const campoParc = document.getElementById('campoParcelas-'+chaveSel);
+          if(campoParc) campoParc.classList.add('oculto');
+        }
+      };
+    });
+
     document.querySelectorAll('[data-pagamento-btn]').forEach(btn=>{
       btn.onclick = e=>{
         const alvo = e.currentTarget;
@@ -2978,18 +3077,31 @@
         const tipoGasto = document.getElementById('novoTipoGasto-'+chave)?.value || 'mes';
         const pagamento = document.getElementById('novoPagamento-'+chave)?.value || 'dinheiro';
         const quantidadeInformada = parseInt(document.getElementById('novoParcelas-'+chave)?.value,10)||1;
-        // gasto fixo se repete todo mês sozinho, então nunca é parcelado em várias vezes
-        const quantidade = (pagamento === 'credito' && tipoGasto !== 'fixo') ? Math.max(1,quantidadeInformada) : 1;
+        const ateFimSelecionado = document.getElementById('novoAteFim-'+chave)?.value || '';
         const erroObjEl = document.getElementById('objetivoErro-'+chave);
         if(erroObjEl){ erroObjEl.classList.add('oculto'); erroObjEl.textContent = ''; }
         if(!cat){ document.getElementById('novaCategoria-'+chave).focus(); return; }
         if(val <= 0){ document.getElementById('novoValor-'+chave).focus(); return; }
-        if(pagamento === 'credito' && quantidade < 1){ document.getElementById('novoParcelas-'+chave).focus(); return; }
+
+        // gasto fixo/objetivo nunca são parcelados; "até um mês" define sozinho por quantos meses repete
+        let quantidade = 1;
+        let dividirValor = false;
+        if(pagamento !== 'objetivo' && tipoGasto === 'ate'){
+          if(!ateFimSelecionado || ateFimSelecionado < estado.mesAtual){
+            document.getElementById('novoAteFim-'+chave)?.focus();
+            return;
+          }
+          quantidade = Math.min(36, Math.max(1, mesesEntre(estado.mesAtual, ateFimSelecionado)));
+        } else if(pagamento === 'credito' && tipoGasto === 'mes'){
+          quantidade = Math.max(1, quantidadeInformada);
+          dividirValor = true;
+        }
+        if(pagamento === 'credito' && dividirValor && quantidade < 1){ document.getElementById('novoParcelas-'+chave).focus(); return; }
 
         let metaEscolhida = null;
         if(pagamento === 'objetivo'){
-          if(tipoGasto === 'fixo'){
-            if(erroObjEl){ erroObjEl.textContent = 'Um gasto pago com objetivo não pode ser fixo. Escolha "Somente neste mês".'; erroObjEl.classList.remove('oculto'); }
+          if(tipoGasto === 'fixo' || tipoGasto === 'ate'){
+            if(erroObjEl){ erroObjEl.textContent = 'Um gasto pago com objetivo não pode ser fixo nem repetir por vários meses. Escolha "Somente neste mês".'; erroObjEl.classList.remove('oculto'); }
             document.getElementById('novoTipoGasto-'+chave).focus();
             return;
           }
@@ -3007,26 +3119,30 @@
           }
         }
 
-        const valorParcela = Math.round((val/quantidade)*100)/100;
+        const valorParcela = dividirValor ? Math.round((val/quantidade)*100)/100 : val;
         const retiradaId = metaEscolhida ? ('ret-'+Date.now()+Math.random().toString(16).slice(2)) : '';
+        const fixoId = tipoGasto === 'fixo' ? 'fixo-'+Date.now()+Math.random().toString(16).slice(2) : '';
+        const ateId = tipoGasto === 'ate' ? 'ate-'+Date.now()+Math.random().toString(16).slice(2) : '';
         for(let n=0; n<quantidade; n++){
           const mes = deslocarMes(estado.mesAtual,n);
-          const valorAtual = n === quantidade-1 ? Math.round((val - valorParcela*(quantidade-1))*100)/100 : valorParcela;
+          const valorAtual = dividirValor ? (n === quantidade-1 ? Math.round((val - valorParcela*(quantidade-1))*100)/100 : valorParcela) : val;
           const pessoaMes = obterMes(mes)[chave];
           const itemParcela = {
             categoria:cat,
             descricao:desc,
             valor:valorAtual,
             limite:0,
-            parcela:quantidade > 1 ? `${n+1}/${quantidade}` : '',
+            parcela:(dividirValor && quantidade > 1) ? `${n+1}/${quantidade}` : '',
             fixo:tipoGasto === 'fixo',
             pagamento:pagamento,
             origemMeta: metaEscolhida ? metaEscolhida.id : '',
             retiradaId: retiradaId,
-            fixoId:tipoGasto === 'fixo' ? 'fixo-'+Date.now()+Math.random().toString(16).slice(2) : '',
+            fixoId: fixoId,
+            ateId: tipoGasto === 'ate' ? ateId : '',
+            ateFim: tipoGasto === 'ate' ? ateFimSelecionado : '',
             pago:false
           };
-          const linhaVazia = pessoaMes.gastos.find(item=>!item.fixo && !item.parcela && !item.pagamento && Number(item.valor)===0 && item.categoria===cat && (item.descricao||'')===desc);
+          const linhaVazia = pessoaMes.gastos.find(item=>!item.fixo && !item.parcela && !item.pagamento && !item.ateId && Number(item.valor)===0 && item.categoria===cat && (item.descricao||'')===desc);
           if(linhaVazia) Object.assign(linhaVazia,itemParcela);
           else pessoaMes.gastos.push(itemParcela);
           if(n===0 && itemParcela.fixo) propagarGastoFixo(chave,itemParcela);
@@ -3170,6 +3286,19 @@
   document.getElementById('drawerSync').onclick=()=>{ abrirFecharDrawer(false); renderModalSync(); document.getElementById('modalSync').classList.remove('oculto'); };
   document.getElementById('drawerAtividades').onclick=()=>{ abrirFecharDrawer(false); renderAtividades(); document.getElementById('modalAtividades').classList.remove('oculto'); };
   document.getElementById('fecharModalAtividades').onclick = ()=> document.getElementById('modalAtividades').classList.add('oculto');
+  document.getElementById('drawerProgramadas').onclick=()=>{ abrirFecharDrawer(false); renderProgramadas(); document.getElementById('modalProgramadas').classList.remove('oculto'); };
+  document.getElementById('fecharModalProgramadas').onclick = ()=> document.getElementById('modalProgramadas').classList.add('oculto');
+  document.getElementById('listaProgramadas').addEventListener('click', e=>{
+    const btn = e.target.closest('[data-parar-recorrencia]');
+    if(!btn) return;
+    const id = btn.dataset.pararRecorrencia;
+    pedirConfirmacao('Remover essa categoria de todos os próximos meses? O mês atual não é afetado.', ()=>{
+      pararRecorrencia(id);
+      renderProgramadas();
+      renderTudo();
+      salvar();
+    });
+  });
   document.getElementById('fecharModalSync').onclick = ()=> document.getElementById('modalSync').classList.add('oculto');
   document.getElementById('btnCriarCodigo').onclick = async ()=>{
     if(!dbSync){ atualizarStatusSync('erro','Sem conexão com o servidor de sincronização agora.'); return; }
