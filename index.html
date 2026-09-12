@@ -722,6 +722,17 @@
   .meta-numeros{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-soft);margin-top:8px;font-weight:500;}
   .meta-numeros b{color:var(--ink);font-variant-numeric:tabular-nums;font-weight:700;}
   .meta-historico-titulo{font-size:11.5px;font-weight:600;color:var(--ink-soft);margin:18px 0 10px;}
+  .meta-rendimento-bloco{margin-top:16px;padding-top:14px;border-top:1px dashed var(--line);}
+  .meta-rendimento-bloco > label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:7px;}
+  .meta-rendimento-modo{display:flex;gap:8px;margin-bottom:9px;}
+  .meta-modo-opcao{flex:1;border:1.5px solid var(--line);background:var(--white);color:var(--ink-soft);font-family:inherit;font-size:12.5px;font-weight:600;padding:9px 4px;border-radius:10px;cursor:pointer;text-align:center;}
+  .meta-modo-opcao.ativa{border-color:var(--gold);background:color-mix(in srgb, var(--gold) 10%, var(--paper));color:var(--ink);}
+  .meta-rendimento-linha{display:flex;gap:8px;align-items:stretch;}
+  .meta-rendimento-linha .meta-campo{flex:1;margin-bottom:0;}
+  .btn-add-rendimento{border:none;background:var(--gold);color:#fff;font-family:inherit;font-size:12.5px;font-weight:700;padding:0 16px;border-radius:9px;cursor:pointer;white-space:nowrap;align-self:flex-end;height:41px;}
+  .btn-add-rendimento:active{opacity:.8;}
+  .meta-rendimento-total{font-size:12.5px;color:var(--ink-soft);margin:9px 0 0;}
+  .meta-rendimento-total b{color:var(--green);font-variant-numeric:tabular-nums;}
   .meta-mini-barras{display:flex;align-items:flex-end;gap:7px;height:62px;overflow-x:auto;padding-bottom:2px;}
   .meta-mini-grupo{display:flex;flex-direction:column;align-items:center;gap:5px;flex:none;width:30px;}
   .meta-mini-barra{width:14px;border-radius:4px 4px 1px 1px;min-height:2px;transition:height .5s ease;}
@@ -1934,6 +1945,8 @@
       if(meta.saldoInicial===undefined) meta.saldoInicial=0;
       if(!meta.contribuicoes) meta.contribuicoes={};
       if(!meta.retiradas) meta.retiradas=[];
+      if(!meta.rendimentos) meta.rendimentos=[];
+      if(!meta.rendimentoModo) meta.rendimentoModo='dia';
       Object.keys(meta.contribuicoes).forEach(mes=>{
         const valor = meta.contribuicoes[mes];
         if(typeof valor !== 'object') meta.contribuicoes[mes] = {p1:Number(valor)||0,p2:0};
@@ -2471,13 +2484,16 @@
   function totalRetiradasMeta(meta){
     return (meta.retiradas||[]).reduce((s,r)=>s+(Number(r.valor)||0),0);
   }
+  function totalRendimentoMeta(meta){
+    return (meta.rendimentos||[]).reduce((s,r)=>s+(Number(r.valor)||0),0);
+  }
   function totalGuardadoMeta(meta){
     const inicial = Number(meta.saldoInicial)||0;
     const aportes = Object.values(meta.contribuicoes||{}).reduce((s,v)=>{
       if(v && typeof v === 'object') return s + (Number(v.p1)||0) + (Number(v.p2)||0);
       return s + (Number(v)||0);
     },0);
-    return inicial + aportes - totalRetiradasMeta(meta);
+    return inicial + aportes - totalRetiradasMeta(meta) + totalRendimentoMeta(meta);
   }
   function faltaMeta(meta){
     return Math.max(0, (Number(meta.valorObjetivo)||0) - totalGuardadoMeta(meta));
@@ -2533,6 +2549,24 @@
         </div>`;
       }).join("") : `<p class="card-sub" style="margin:0;">Ainda sem aportes guardados.</p>`;
 
+      const rendimentoPorMes = {};
+      (m.rendimentos||[]).forEach(r=>{
+        const c = chaveMes(new Date(r.quando));
+        rendimentoPorMes[c] = (rendimentoPorMes[c]||0) + (Number(r.valor)||0);
+      });
+      const mesesRendimento = mesesOrdenados().filter(c=>rendimentoPorMes[c]>0).slice(-8);
+      const maiorRendimento = Math.max(1, ...mesesRendimento.map(c=>rendimentoPorMes[c]));
+      const miniBarrasRendimento = mesesRendimento.length ? mesesRendimento.map(c=>{
+        const v = rendimentoPorMes[c];
+        const h = Math.max(3, Math.round((v/maiorRendimento)*50));
+        return `<div class="meta-mini-grupo">
+          <div class="meta-mini-barra" style="height:${h}px;background:var(--green)" title="${formatarMoeda(v)}"></div>
+          <span class="meta-mini-mes">${rotuloMesCurto(c)}</span>
+        </div>`;
+      }).join("") : `<p class="card-sub" style="margin:0;">Ainda sem rendimento lançado.</p>`;
+      const rendimentoTotal = totalRendimentoMeta(m);
+      const rendimentoModo = m.rendimentoModo || 'dia';
+
       const expandida = metasExpandidas.has(m.id);
 
       return `<div class="card meta-card ${expandida?'expandida':''}" data-meta-card-id="${m.id}" style="border:1px solid var(--line);border-radius:14px;padding:16px;background:var(--paper);">
@@ -2565,8 +2599,25 @@
             <div class="caixa"><span>R$</span><input type="text" inputmode="decimal" data-meta-id="${m.id}" data-meta-campo="contribuicaoMes" data-meta-pessoa="p2" value="${formatarValorInput(contribP2)}" placeholder="0,00"></div>
           </div>
           <p class="mini-info">O valor deste mês será somado automaticamente ao que já está guardado.</p>
+
+          <div class="meta-rendimento-bloco">
+            <label>Rendimento</label>
+            <div class="meta-rendimento-modo">
+              <button type="button" class="meta-modo-opcao ${rendimentoModo==='dia'?'ativa':''}" data-meta-id="${m.id}" data-rendimento-modo="dia">Diário</button>
+              <button type="button" class="meta-modo-opcao ${rendimentoModo==='semana'?'ativa':''}" data-meta-id="${m.id}" data-rendimento-modo="semana">Semanal</button>
+            </div>
+            <div class="meta-rendimento-linha">
+              <div class="meta-campo"><div class="caixa"><span>R$</span><input type="text" inputmode="decimal" id="rendimentoValor-${m.id}" placeholder="0,00"></div></div>
+              <button type="button" class="btn-add-rendimento" data-meta-id="${m.id}">+ Adicionar</button>
+            </div>
+            <small class="mini-info">${rendimentoModo==='dia' ? 'Rendimento do dia' : 'Rendimento da semana'}: some automaticamente ao total guardado, junto com o que já tinha antes.</small>
+            <p class="meta-rendimento-total">Rendimento total: <b>${formatarMoeda(rendimentoTotal)}</b></p>
+          </div>
+
           <p class="meta-historico-titulo">Guardado por mês</p>
           <div class="meta-mini-barras">${miniBarras}</div>
+          <p class="meta-historico-titulo">Rendimento por mês</p>
+          <div class="meta-mini-barras">${miniBarrasRendimento}</div>
           ${(m.retiradas&&m.retiradas.length) ? `<p class="meta-historico-titulo">Retirado para pagar contas</p>
           <div class="meta-retiradas-lista">${m.retiradas.slice().reverse().map(r=>`<div class="meta-retirada-item"><span>${r.descricao||'Pagamento'}</span><span>− ${formatarMoeda(r.valor)}</span></div>`).join('')}</div>` : ''}
           <div class="meta-remover-linha"><button data-remover-meta="${m.id}">Remover objetivo</button></div>
@@ -2641,6 +2692,35 @@
         salvar();
       };
     });
+    document.querySelectorAll('[data-rendimento-modo]').forEach(btn=>{
+      btn.onclick = e=>{
+        const meta = estado.metas.find(m=>m.id===e.currentTarget.dataset.metaId);
+        meta.rendimentoModo = e.currentTarget.dataset.rendimentoModo;
+        renderMetas();
+        ligarEventosMetas();
+        salvar();
+      };
+    });
+    document.querySelectorAll('[id^="rendimentoValor-"]').forEach(inp=>{
+      ligarCampoMoeda(inp);
+      inp.oninput = e=>{ e.target.value = saneandoDigitacaoMoeda(e.target.value); };
+    });
+    document.querySelectorAll('.btn-add-rendimento').forEach(btn=>{
+      btn.onclick = e=>{
+        const metaId = e.currentTarget.dataset.metaId;
+        const meta = estado.metas.find(m=>m.id===metaId);
+        const inp = document.getElementById('rendimentoValor-'+metaId);
+        const valor = paraNumero(inp.value);
+        if(valor <= 0){ inp.focus(); return; }
+        if(!meta.rendimentos) meta.rendimentos = [];
+        meta.rendimentos.push({ id: 'rend-'+Date.now()+Math.random().toString(16).slice(2), valor, quando: new Date().toISOString(), modo: meta.rendimentoModo || 'dia' });
+        inp.value = '';
+        renderMetas();
+        ligarEventosMetas();
+        renderMetasResumo(); renderResumo();
+        salvar();
+      };
+    });
     document.querySelectorAll('[data-remover-meta]').forEach(btn=>{
       btn.onclick = e=>{
         const id = e.currentTarget.dataset.removerMeta;
@@ -2668,7 +2748,7 @@
     const nome = document.getElementById('novaMetaNome').value.trim();
     const valor = paraNumero(document.getElementById('novaMetaValor').value);
     if(!nome){ document.getElementById('novaMetaNome').focus(); return; }
-    estado.metas.push({ id: 'm'+Date.now()+Math.random().toString(16).slice(2), nome, valorObjetivo: valor, saldoInicial: 0, contribuicoes:{}, retiradas:[] });
+    estado.metas.push({ id: 'm'+Date.now()+Math.random().toString(16).slice(2), nome, valorObjetivo: valor, saldoInicial: 0, contribuicoes:{}, retiradas:[], rendimentos:[], rendimentoModo:'dia' });
     document.getElementById('novaMetaNome').value = "";
     document.getElementById('novaMetaValor').value = "";
     document.getElementById('formNovaMeta').classList.remove('aberto');
