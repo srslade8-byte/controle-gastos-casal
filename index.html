@@ -974,6 +974,11 @@
   .quick-backup strong{display:block;font-family:'Fraunces',serif;font-size:15px;}
   .quick-backup small{color:var(--ink-soft);font-size:11px;}
   .quick-backup button{border:none;border-radius:10px;background:var(--accent);color:#fff;padding:10px 12px;font-weight:700;cursor:pointer;box-shadow:var(--shadow-soft);}
+  .btn-trazer-saldo{display:block;width:100%;margin-top:10px;border:1.5px dashed var(--gold);background:color-mix(in srgb, var(--gold) 8%, var(--paper));color:var(--ink);font-family:inherit;font-size:12.5px;font-weight:600;padding:11px 12px;border-radius:12px;cursor:pointer;text-align:left;}
+  .btn-trazer-saldo:active{opacity:.8;}
+  .saldo-trazido-linha{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding:11px 13px;border-radius:12px;background:color-mix(in srgb, var(--gold) 10%, var(--paper));border:1px solid var(--line);font-size:12.5px;color:var(--ink);}
+  .saldo-trazido-linha b{color:var(--gold);}
+  .btn-remover-trazido{border:none;background:none;color:var(--ink-soft);font-size:11px;text-decoration:underline;cursor:pointer;padding:0;white-space:nowrap;}
   .renda-extra-row{margin-top:12px;padding:12px 15px;border-radius:14px;background:linear-gradient(135deg, var(--green-soft), color-mix(in srgb, var(--green-soft) 55%, var(--white)));border:1px solid var(--line);}
   .renda-extra-row label{display:block;color:var(--ink-soft);font-size:11px;font-weight:600;margin-bottom:5px;}
   .renda-extra-row input{width:100%;border:none;background:transparent;color:var(--ink);font-family:'Fraunces',serif;font-size:19px;font-weight:600;}
@@ -1473,8 +1478,8 @@
 
   function dadosMesPadrao(){
     return {
-      p1: { salario:0, rendaExtra:0, investimentoObjetivo:0, gastos: CATEGORIAS_P1.map(c => ({ categoria:c, descricao:"", valor:0, limite:0, parcela:"", fixo:false, pagamento:"", pago:false })) },
-      p2: { salario:0, rendaExtra:0, investimentoObjetivo:0, gastos: CATEGORIAS_P2.map(c => ({ categoria:c, descricao:"", valor:0, limite:0, parcela:"", fixo:false, pagamento:"", pago:false })) }
+      p1: { salario:0, rendaExtra:0, saldoTrazido:0, investimentoObjetivo:0, gastos: CATEGORIAS_P1.map(c => ({ categoria:c, descricao:"", valor:0, limite:0, parcela:"", fixo:false, pagamento:"", pago:false })) },
+      p2: { salario:0, rendaExtra:0, saldoTrazido:0, investimentoObjetivo:0, gastos: CATEGORIAS_P2.map(c => ({ categoria:c, descricao:"", valor:0, limite:0, parcela:"", fixo:false, pagamento:"", pago:false })) }
     };
   }
 
@@ -1757,7 +1762,13 @@
   function totalPessoa(p){ return p.gastos.reduce((s,i)=> i.pago ? s+(Number(i.valor)||0) : s,0); }
   function totalPessoaTudo(p){ return p.gastos.reduce((s,i)=>s+(Number(i.valor)||0),0); }
   function totalPessoaSaldo(p){ return p.gastos.reduce((s,i)=> (i.pago && !i.origemMeta) ? s+(Number(i.valor)||0) : s,0); }
-  function rendaPessoa(p){ return (Number(p.salario)||0) + (Number(p.rendaExtra)||0); }
+  function rendaPessoa(p){ return (Number(p.salario)||0) + (Number(p.rendaExtra)||0) + (Number(p.saldoTrazido)||0); }
+  function sobraPessoaMes(chavePessoa, chaveM){
+    const dados = obterMes(chaveM)[chavePessoa];
+    const gastos = totalPessoaSaldo(dados);
+    const objetivo = investimentoPessoaMes(chavePessoa, chaveM);
+    return rendaPessoa(dados) - gastos - objetivo;
+  }
   function investimentoPessoaMes(chavePessoa, chaveM=estado.mesAtual){
     return (estado.metas||[]).reduce((s,m)=>{
       const valor = (m.contribuicoes||{})[chaveM];
@@ -1882,7 +1893,7 @@
           pago: false
         });
       });
-      return { salario:0, rendaExtra: Number(p.rendaExtra)||0, gastos };
+      return { salario:0, rendaExtra: Number(p.rendaExtra)||0, saldoTrazido:0, gastos };
     }
     return { p1: copiarPessoa(bd.p1), p2: copiarPessoa(bd.p2) };
   }
@@ -1959,7 +1970,7 @@
     if(!obj.historicoBackup) obj.historicoBackup = [];
     if(!obj.atividades) obj.atividades = [];
     if(!obj.recorrenciasEncerradas) obj.recorrenciasEncerradas = [];
-    Object.values(obj.meses||{}).forEach(m=>{ ["p1","p2"].forEach(k=>{ if(m[k]) { if(m[k].rendaExtra===undefined) m[k].rendaExtra=0; if(m[k].investimentoObjetivo===undefined) m[k].investimentoObjetivo=0; } }); });
+    Object.values(obj.meses||{}).forEach(m=>{ ["p1","p2"].forEach(k=>{ if(m[k]) { if(m[k].rendaExtra===undefined) m[k].rendaExtra=0; if(m[k].investimentoObjetivo===undefined) m[k].investimentoObjetivo=0; if(m[k].saldoTrazido===undefined) m[k].saldoTrazido=0; } }); });
     if(!obj.graficoComparativoTipo) obj.graficoComparativoTipo = "barras";
     if(!obj.graficoCategoriasTipo) obj.graficoCategoriasTipo = "rosca";
     if(!obj.graficoHistoricoTipo) obj.graficoHistoricoTipo = "gastos";
@@ -2132,6 +2143,18 @@
       <p class="card-titulo" style="margin-top:2px;">Salário do mês</p>
       <p class="card-sub">Quanto ${nome} recebeu esse mês.</p>
       <div class="salario-row"><span class="prefixo">R$</span><input type="text" inputmode="decimal" class="input-salario" data-pessoa="${chave}" value="${formatarValorInput(p.salario)}" placeholder="0,00"></div>
+      ${(() => {
+        const mesAnteriorChave = deslocarMes(estado.mesAtual, -1);
+        if(!estado.meses[mesAnteriorChave]) return '';
+        if(Number(p.saldoTrazido)){
+          return `<div class="saldo-trazido-linha">
+            <span>💰 Trazido do mês anterior: <b>${formatarMoeda(p.saldoTrazido)}</b></span>
+            <button type="button" class="btn-remover-trazido" data-pessoa="${chave}">remover</button>
+          </div>`;
+        }
+        const sobraAnteriorValor = sobraPessoaMes(chave, mesAnteriorChave);
+        return `<button type="button" class="btn-trazer-saldo" data-pessoa="${chave}" data-valor-trazer="${sobraAnteriorValor}">↩️ Trazer o que sobrou do mês anterior (${formatarMoeda(sobraAnteriorValor)})</button>`;
+      })()}
       <div class="renda-extra-row"><label>Renda extra / valor além do salário</label><input type="text" inputmode="decimal" class="input-renda-extra" data-pessoa="${chave}" value="${formatarValorInput(p.rendaExtra)}" placeholder="0,00"></div>
     </section>`;
 
@@ -3008,6 +3031,23 @@
     document.querySelectorAll('.input-renda-extra').forEach(inp=>{
       ligarCampoMoeda(inp);
       inp.oninput = e=>{ e.target.value = saneandoDigitacaoMoeda(e.target.value); dadosPessoa(e.target.dataset.pessoa).rendaExtra = paraNumero(e.target.value); renderResumo(); salvar(); };
+    });
+    document.querySelectorAll('.btn-trazer-saldo').forEach(btn=>{
+      btn.onclick = e=>{
+        const chaveP = e.currentTarget.dataset.pessoa;
+        const valor = parseFloat(e.currentTarget.dataset.valorTrazer) || 0;
+        dadosPessoa(chaveP).saldoTrazido = valor;
+        renderTudo();
+        salvar();
+      };
+    });
+    document.querySelectorAll('.btn-remover-trazido').forEach(btn=>{
+      btn.onclick = e=>{
+        const chaveP = e.currentTarget.dataset.pessoa;
+        dadosPessoa(chaveP).saldoTrazido = 0;
+        renderTudo();
+        salvar();
+      };
     });
 
     document.querySelectorAll('.valor-input, .categoria-desc-input').forEach(inp=>{
