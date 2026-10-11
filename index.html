@@ -1043,6 +1043,9 @@
   .btn-parar-recorrencia{margin-top:8px;border:none;background:none;color:var(--red);font-size:12px;font-weight:600;text-decoration:underline;text-underline-offset:2px;cursor:pointer;padding:0;}
   @media (min-width:700px){#app{box-shadow:0 0 44px rgba(0,0,0,.14);}.drawer{left:calc(50% - 230px);}}
 
+  .metas-abas{display:flex;gap:6px;margin:10px 0 14px;background:var(--line);padding:4px;border-radius:12px;}
+  .meta-aba{flex:1;border:0;background:transparent;padding:9px 6px;border-radius:9px;font:inherit;font-size:13px;font-weight:600;color:var(--ink);opacity:.65;cursor:pointer;}
+  .meta-aba.ativa{background:var(--paper);opacity:1;box-shadow:0 1px 3px rgba(0,0,0,.15);}
 </style>
 </head>
 <body>
@@ -1250,6 +1253,7 @@
       <section class="card">
         <p class="card-titulo">Objetivos</p>
         <p class="card-sub">Informe o que já está guardado e acrescente o investimento de cada mês.</p>
+        <div id="metasAbas" class="metas-abas"></div>
         <div id="metasLista"></div>
         <button class="btn-add" id="btnAbrirNovaMeta">+ Novo objetivo</button>
         <div class="form-novo" id="formNovaMeta">
@@ -2545,13 +2549,28 @@
     }).join("");
   }
 
+  let metasAbaAtiva = 'aconcluir';
+  function metaConcluida(m){ return (Number(m.valorObjetivo)||0) > 0 && totalGuardadoMeta(m) >= (Number(m.valorObjetivo)||0); }
+
   function renderMetas(){
     const lista = document.getElementById('metasLista');
+    const abas = document.getElementById('metasAbas');
+    const nConcl = estado.metas.filter(metaConcluida).length;
+    const nFalta = estado.metas.length - nConcl;
+    abas.innerHTML = `<button class="meta-aba ${metasAbaAtiva==='aconcluir'?'ativa':''}" data-meta-aba="aconcluir">A concluir (${nFalta})</button><button class="meta-aba ${metasAbaAtiva==='concluidos'?'ativa':''}" data-meta-aba="concluidos">Concluídos (${nConcl})</button>`;
+    abas.querySelectorAll('[data-meta-aba]').forEach(b=>{
+      b.onclick = ()=>{ metasAbaAtiva = b.dataset.metaAba; renderMetas(); ligarEventosMetas(); };
+    });
     if(!estado.metas.length){
       lista.innerHTML = `<div class="meta-vazio">Você ainda não tem nenhum objetivo.<br>Que tal começar com uma geladeira, uma viagem ou a casa própria?</div>`;
       return;
     }
-    lista.innerHTML = estado.metas.map(m=>{
+    const filtradas = estado.metas.filter(m => metasAbaAtiva==='concluidos' ? metaConcluida(m) : !metaConcluida(m));
+    if(!filtradas.length){
+      lista.innerHTML = `<div class="meta-vazio">${metasAbaAtiva==='concluidos' ? 'Nenhum objetivo concluído ainda.<br>Continue guardando, você chega lá! 💪' : 'Nenhum objetivo a concluir.<br>Crie um novo objetivo abaixo.'}</div>`;
+      return;
+    }
+    lista.innerHTML = filtradas.map(m=>{
       const guardado = totalGuardadoMeta(m);
       const falta = faltaMeta(m);
       const saldoInicial = Number(m.saldoInicial)||0;
