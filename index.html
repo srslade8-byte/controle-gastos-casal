@@ -1319,6 +1319,40 @@
   b.inv{color:var(--gold);}
   .ano-leg{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--ink-soft);font-weight:600;margin-bottom:14px;}
   .ano-leg span{display:inline-flex;align-items:center;gap:6px;}
+
+  /* ---- v32: mais limpo ---- */
+  section.card .card-titulo{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;user-select:none;}
+  section.card .card-titulo::after{content:"";width:8px;height:8px;flex:none;margin-right:6px;border-right:2px solid var(--ink-soft);border-bottom:2px solid var(--ink-soft);transform:rotate(-135deg) translate(-2px,-2px);transition:transform .25s ease;opacity:.7;}
+  section.card.colapsado .card-titulo::after{transform:rotate(45deg) translate(-2px,-2px);}
+  .card-cabecalho > div:first-child{flex:1;min-width:0;}
+  section.card.colapsado{padding-bottom:14px;}
+  section.card.colapsado > *:not(.card-cabecalho):not(.card-titulo):not(.nome-editavel-row){display:none !important;}
+  section.card.colapsado .card-cabecalho .card-sub{display:none;}
+  section.card.colapsado .card-titulo{margin-bottom:0;}
+  section.card.colapsado .card-cabecalho{margin-bottom:0;}
+  .link-mais-opcoes{text-decoration:none;color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);padding:4px 10px;border-radius:9px;margin-top:6px;font-size:10.5px;}
+  #opcoesCorpo .opcoes-extra{display:block !important;margin:6px 0 0;}
+  #opcoesCorpo .opcoes-extra.oculto{display:block !important;}
+  .meta-prazo-chip{margin-top:10px;font-size:11.5px;font-weight:600;color:var(--accent);background:color-mix(in srgb,var(--accent) 11%,var(--white));padding:7px 11px;border-radius:11px;line-height:1.35;}
+  .meta-prazo-chip.atrasado{color:var(--red);background:var(--red-soft);}
+  .meta-prazo-chip.ok{color:var(--green);background:var(--green-soft);}
+  .busca-box{max-height:88vh;overflow-y:auto;}
+  .busca-input{width:100%;border:1.5px solid var(--line);background:var(--paper);border-radius:14px;padding:12px 14px;font-size:14px;font-family:inherit;color:var(--ink);margin:4px 0 10px;}
+  .busca-input:focus{outline:none;border-color:var(--accent);}
+  .busca-grupo{margin-bottom:8px;}
+  .busca-grupo > span{display:block;font-size:10.5px;font-weight:700;letter-spacing:.04em;color:var(--ink-soft);margin:6px 2px 5px;text-transform:uppercase;}
+  .busca-chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .busca-chip{border:none;background:var(--paper);color:var(--ink-soft);padding:7px 12px;border-radius:12px;font-size:12px;font-weight:600;cursor:pointer;}
+  .busca-chip.ativo{background:var(--accent);color:#fff;}
+  .busca-total{display:flex;justify-content:space-between;align-items:baseline;margin:14px 2px 8px;font-size:12px;color:var(--ink-soft);font-weight:600;}
+  .busca-total b{font-family:'Poppins',sans-serif;font-size:17px;color:var(--ink);}
+  .busca-lista{display:flex;flex-direction:column;gap:6px;max-height:34vh;overflow-y:auto;}
+  .busca-item{display:flex;align-items:center;gap:10px;border:none;background:var(--paper);border-radius:14px;padding:10px 12px;text-align:left;cursor:pointer;color:var(--ink);font-family:inherit;}
+  .busca-item-info{flex:1;min-width:0;}
+  .busca-item-info b{display:block;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .busca-item-info small{font-size:11px;color:var(--ink-soft);}
+  .busca-item-valor{font-weight:700;font-size:13px;font-variant-numeric:tabular-nums;}
+  nav.tabbar button{font-size:11px;}
 </style>
 </head>
 <body>
@@ -1334,7 +1368,8 @@
       <button class="drawer-nav" data-drawer-tab="p1"><span class="icone">👤</span><span data-drawer-name="p1">Pessoa 1</span></button>
       <button class="drawer-nav" data-drawer-tab="p2"><span class="icone">👤</span><span data-drawer-name="p2">Pessoa 2</span></button>
       <button class="drawer-nav" data-drawer-tab="metas"><span class="icone">🎯</span>Metas e objetivos</button>
-      <button class="drawer-nav" data-drawer-tab="historico"><span class="icone">▦</span>Histórico anual</button>
+      <button class="drawer-nav" id="drawerAno"><span class="icone">▦</span>Resumo do ano</button>
+      <button class="drawer-nav" id="drawerBusca"><span class="icone">🔍</span>Buscar lançamentos</button>
     </div>
     <div class="drawer-section">
       <h3>Dados</h3>
@@ -1437,7 +1472,7 @@
         <button class="atalho" data-ir="p1"><span class="atalho-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.5-6 8-6s8 2 8 6"/></svg></span><span class="atalho-nome" data-atalho-nome="p1">Pessoa 1</span></button>
         <button class="atalho" data-ir="p2"><span class="atalho-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.5-6 8-6s8 2 8 6"/></svg></span><span class="atalho-nome" data-atalho-nome="p2">Pessoa 2</span></button>
         <button class="atalho" data-ir="metas"><span class="atalho-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg></span><span class="atalho-nome">Metas</span></button>
-        <button class="atalho" data-ir="historico"><span class="atalho-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg></span><span class="atalho-nome">Ano</span></button>
+        <button class="atalho" data-abrir-busca="1"><span class="atalho-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></span><span class="atalho-nome">Buscar</span></button>
       </div>
 
 
@@ -1447,10 +1482,7 @@
             <p class="card-titulo">Saídas do mês</p>
             <p class="card-sub">Gastos e valores separados para os objetivos.</p>
           </div>
-          <div class="card-reorder" data-reorder="renda">
-            <button data-mover="cima">▲</button>
-            <button data-mover="baixo">▼</button>
-          </div>
+          
         </div>
 
         <div class="pessoa-resumo">
@@ -1471,7 +1503,7 @@
       </section>
 
       <section class="card" data-card-id="entradas">
-        <div class="card-cabecalho"><div><p class="card-titulo">Entradas do mês</p><p class="card-sub">De onde vem o dinheiro e quanto foi guardado nos objetivos.</p></div><div class="card-reorder" data-reorder="entradas"><button data-mover="cima">▲</button><button data-mover="baixo">▼</button></div></div>
+        <div class="card-cabecalho"><div><p class="card-titulo">Entradas do mês</p><p class="card-sub">De onde vem o dinheiro e quanto foi guardado nos objetivos.</p></div></div>
         <div id="resumoEntradas"></div>
         <div id="resumoInvestimentos" style="margin-top:12px;"></div>
         <div id="resumoEquilibrio" style="margin-top:10px;"></div>
@@ -1483,10 +1515,7 @@
             <p class="card-titulo">Renda x gasto x objetivo</p>
             <p class="card-sub">Veja a renda, os gastos e o que foi separado para os objetivos.</p>
           </div>
-          <div class="card-reorder" data-reorder="comparativo">
-            <button data-mover="cima">▲</button>
-            <button data-mover="baixo">▼</button>
-          </div>
+          
         </div>
         <div class="pill-group">
           <button class="pill" data-comparativo-tipo="barras">Barras</button>
@@ -1501,10 +1530,7 @@
             <p class="card-titulo">Maiores categorias</p>
             <p class="card-sub">Somando os gastos dos dois.</p>
           </div>
-          <div class="card-reorder" data-reorder="categorias">
-            <button data-mover="cima">▲</button>
-            <button data-mover="baixo">▼</button>
-          </div>
+          
         </div>
         <div class="pill-group">
           <button class="pill" data-categorias-tipo="rosca">Distribuição</button>
@@ -1519,12 +1545,26 @@
             <p class="card-titulo">Meus objetivos</p>
             <p class="card-sub">O quanto falta pra cada meta.</p>
           </div>
-          <div class="card-reorder" data-reorder="metas">
-            <button data-mover="cima">▲</button>
-            <button data-mover="baixo">▼</button>
-          </div>
+          
         </div>
         <div id="areaMetasResumo"></div>
+      </section>
+
+      <section class="card" data-card-id="ano">
+        <div class="card-cabecalho"><div><p class="card-titulo">Resumo do ano</p><p class="card-sub">Entradas, saídas e investimento de todos os meses do ano.</p></div></div>
+        <div id="histAnual"></div>
+      </section>
+
+      <section class="card" data-card-id="meses">
+        <div class="card-cabecalho"><div><p class="card-titulo">Histórico de meses</p><p class="card-sub">Veja onde o dinheiro foi embora mês a mês.</p></div></div>
+        <div class="pill-group">
+          <button class="pill" data-historico-tipo="gastos">Total gasto</button>
+          <button class="pill" data-historico-tipo="saldo">Evolução do saldo</button>
+        </div>
+        <div id="histDestaque"></div>
+        <div id="histBarras" class="hist-barras"></div>
+        <p class="card-sub" style="margin:16px 0 8px;font-weight:600;">Todos os meses</p>
+        <div id="histLista"></div>
       </section>
 
       <div class="acao-compartilhar">
@@ -1559,24 +1599,6 @@
     </div>
 
     <!-- ===================== HISTORICO ===================== -->
-    <div id="viewHistorico" class="oculto view-conteudo">
-      <div id="histAnual"></div>
-      <section class="card">
-        <p class="card-titulo">Histórico de meses</p>
-        <p class="card-sub">Veja onde o dinheiro foi embora mês a mês.</p>
-        <div class="pill-group">
-          <button class="pill" data-historico-tipo="gastos">Total gasto</button>
-          <button class="pill" data-historico-tipo="saldo">Evolução do saldo</button>
-        </div>
-        <div id="histDestaque"></div>
-        <div id="histBarras" class="hist-barras"></div>
-      </section>
-      <section class="card">
-        <p class="card-titulo">Todos os meses</p>
-        <div id="histLista"></div>
-      </section>
-    </div>
-
   </main>
 
   <nav class="tabbar">
@@ -1595,10 +1617,6 @@
     <button data-tab="metas">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>
       <span class="rotulo-tab">Metas</span>
-    </button>
-    <button data-tab="historico">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
-      <span class="rotulo-tab">Ano</span>
     </button>
   </nav>
 
@@ -1724,6 +1742,24 @@
   </div>
 </div>
 
+<div class="confirm-overlay oculto" id="modalOpcoes">
+  <div class="confirm-box">
+    <h3 id="opcoesTitulo">Detalhes do gasto</h3>
+    <div id="opcoesCorpo"></div>
+    <div class="confirm-botoes"><button id="fecharOpcoes" class="btn-salvar" style="flex:1;">Concluído</button></div>
+  </div>
+</div>
+
+<div class="confirm-overlay oculto" id="modalBusca">
+  <div class="confirm-box busca-box">
+    <h3>Buscar lançamentos</h3>
+    <input type="text" id="buscaTexto" class="busca-input" placeholder="Categoria, descrição ou valor..." autocomplete="off">
+    <div id="buscaFiltros"></div>
+    <div id="buscaResultados"></div>
+    <div class="confirm-botoes"><button id="fecharBusca" style="flex:1;">Fechar</button></div>
+  </div>
+</div>
+
 <div class="confirm-overlay oculto" id="modalEditarPagamento">
   <div class="confirm-box">
     <h3>Forma de pagamento</h3>
@@ -1788,7 +1824,7 @@
       mesAtual: mesInicial,
       meses: meses,
       metas: [],
-      layoutResumo: ["renda","entradas","comparativo","categorias","metas"],
+      layoutResumo: ["renda","entradas","comparativo","categorias","metas","ano","meses"],
       paleta: "original",
       historicoBackup: [],
       atividades: [],
@@ -2257,8 +2293,9 @@
         else meta.contribuicoes[mes] = {p1:Number(valor.p1)||0,p2:Number(valor.p2)||0};
       });
     });
-    if(!obj.layoutResumo) obj.layoutResumo = ["renda","entradas","comparativo","categorias","metas"];
+    if(!obj.layoutResumo) obj.layoutResumo = ["renda","entradas","comparativo","categorias","metas","ano","meses"];
     if(!obj.layoutResumo.includes("entradas")) obj.layoutResumo.splice(1,0,"entradas");
+    ["ano","meses"].forEach(id=>{ if(!obj.layoutResumo.includes(id)) obj.layoutResumo.push(id); });
     if(!obj.paleta) obj.paleta = "original";
     if(!obj.historicoBackup) obj.historicoBackup = [];
     if(!obj.atividades) obj.atividades = [];
@@ -2441,8 +2478,8 @@
         if(!estado.meses[mesAnteriorChave]) return '';
         if(Number(p.saldoTrazido)){
           return `<div class="saldo-trazido-linha">
-            <span>💰 Trazido do mês anterior: <b>${formatarMoeda(p.saldoTrazido)}</b></span>
-            <button type="button" class="btn-remover-trazido" data-pessoa="${chave}">remover</button>
+            <span>💰 Sobra do mês passado: <b>${formatarMoeda(p.saldoTrazido)}</b></span>
+            <button type="button" class="btn-remover-trazido" data-pessoa="${chave}">tirar</button>
           </div>`;
         }
         const sobraAnteriorValor = sobraPessoaMes(chave, mesAnteriorChave);
@@ -2484,7 +2521,7 @@
           </div>
           <input class="categoria-desc-input" data-pessoa="${chave}" data-idx="${i}" data-campo="descricao" placeholder="adicionar descrição..." value="${item.descricao||''}">
           <div class="aviso-limite" id="aviso-${chave}-${i}">${acimaInicial ? ('Passou o limite de '+formatarMoeda(item.limite)) : ''}</div>
-          <button class="link-mais-opcoes" data-toggle-opcoes="${chave}-${i}">mais opções</button>
+          <button class="link-mais-opcoes" data-toggle-opcoes="${chave}-${i}">⋯ detalhes</button>
           <div class="opcoes-extra oculto" id="opcoes-${chave}-${i}">
             <div class="opcoes-extra-campo">
               <label>Limite mensal (opcional)</label>
@@ -2655,7 +2692,7 @@
         <div class="ent-chips">
           <span class="ent-chip"><i style="background:${cor}"></i>Salário <b>${formatarMoeda(sal)}</b></span>
           <span class="ent-chip"><i style="background:var(--green)"></i>Renda extra <b>${formatarMoeda(ext)}</b></span>
-          ${tra>0?`<span class="ent-chip"><i style="background:var(--gold)"></i>Mês anterior <b>${formatarMoeda(tra)}</b></span>`:''}
+          ${tra>0?`<span class="ent-chip"><i style="background:var(--gold)"></i>Sobra do mês passado <b>${formatarMoeda(tra)}</b></span>`:''}
           ${inv>0?`<span class="ent-chip inv"><i style="background:var(--gold)"></i>Guardado em objetivos <b>${formatarMoeda(inv)}</b></span>`:''}
         </div>
         <button type="button" class="ent-add" data-ir-renda="${k}">＋ Adicionar renda extra</button>
@@ -2823,6 +2860,16 @@
     return Math.min(100, (totalGuardadoMeta(meta)/alvo)*100);
   }
 
+  function infoPrazoMeta(m){
+    if(!m.prazo) return null;
+    const falta = faltaMeta(m);
+    if(falta<=0 && (Number(m.valorObjetivo)||0)>0) return {texto:'Meta concluída 🎉', ok:true};
+    const hoje = chaveMes(new Date());
+    const n = mesesEntre(hoje, m.prazo);
+    if(n<=0) return {texto:`Prazo de ${rotuloMes(m.prazo)} venceu · faltam ${formatarMoeda(falta)}`, atrasado:true};
+    return {texto:`Guarde ${formatarMoeda(falta/n)} por mês até ${rotuloMes(m.prazo)} (${n} ${n===1?'mês':'meses'})`};
+  }
+
   function renderMetasResumo(){
     const area = document.getElementById('areaMetasResumo');
     if(!estado.metas.length){
@@ -2837,6 +2884,7 @@
           <span class="pessoa-numeros">falta ${formatarMoeda(faltaMeta(m))}</span>
         </div>
         <div class="barra-bg"><div class="barra-fill" style="width:${pct}%;background:var(--gold)"></div></div>
+        ${(()=>{ const ip=infoPrazoMeta(m); return ip ? `<div class="meta-prazo-chip ${ip.atrasado?'atrasado':ip.ok?'ok':''}">🗓️ ${ip.texto}</div>` : ''; })()}
       </div>`;
     }).join("");
   }
@@ -2911,9 +2959,14 @@
           </div>
           <div class="meta-progress-bg"><div class="meta-progress-fill" style="width:${pct}%"></div></div>
           <div class="meta-numeros"><span>Guardado até agora <b>${formatarMoeda(guardado)}</b></span><span>Falta <b>${formatarMoeda(falta)}</b></span></div>
+          ${(()=>{ const ip=infoPrazoMeta(m); return ip ? `<div class="meta-prazo-chip ${ip.atrasado?'atrasado':ip.ok?'ok':''}">🗓️ ${ip.texto}</div>` : ''; })()}
         </div>
         <div class="meta-detalhe ${expandida?'':'oculto'}" id="meta-detalhe-${m.id}">
           <input type="text" class="meta-nome-input" data-meta-id="${m.id}" data-meta-campo="nome" value="${m.nome}">
+          <div class="meta-campo meta-campo-wide">
+            <label>Prazo para concluir (opcional)</label>
+            <div class="caixa"><input type="month" data-meta-id="${m.id}" data-meta-campo="prazo" value="${m.prazo||''}"></div>
+          </div>
           <div class="meta-campo-row">
             <div class="meta-campo">
               <label>Valor do objetivo</label>
@@ -2981,6 +3034,14 @@
       };
     });
 
+    document.querySelectorAll('[data-meta-campo="prazo"]').forEach(inp=>{
+      inp.onchange = e=>{
+        const meta = estado.metas.find(m=>m.id===e.target.dataset.metaId);
+        meta.prazo = e.target.value || '';
+        renderMetas(); renderMetasResumo(); ligarEventosMetas();
+        salvar();
+      };
+    });
     document.querySelectorAll('[data-meta-campo="nome"]').forEach(inp=>{
       inp.oninput = e=>{
         const meta = estado.metas.find(m=>m.id===e.target.dataset.metaId);
@@ -3156,9 +3217,8 @@
         <div class="ano-seg"><span style="width:${Math.min(100,pc(a.sai,a.ent))}%;background:var(--red)"></span><span style="width:${Math.min(100,pc(a.inv,a.ent))}%;background:var(--gold)"></span></div>
         <div class="gr-valores"><div><i style="background:var(--green)"></i><span>Entradas</span><b>${formatarMoeda(a.ent)}</b></div><div><i style="background:var(--red)"></i><span>Saídas</span><b>${formatarMoeda(a.sai)}</b></div><div><i style="background:var(--gold)"></i><span>Investimento</span><b>${formatarMoeda(a.inv)}</b></div><div class="gr-total"><span>Sobra</span><b class="${sob<0?'neg':'pos'}">${formatarMoeda(sob)}</b></div></div></div>`;
     }
-    el.innerHTML = `<section class="card">
-      <p class="card-titulo">Resumo de ${ano}</p>
-      <p class="card-sub">Entradas, saídas e investimento (o que foi colocado nos objetivos e não é gasto).</p>
+    el.innerHTML = `<div>
+      <p class="card-sub" style="margin:0 0 12px;"><b>${ano}</b> · investimento é o que foi colocado nos objetivos (não é gasto).</p>
       <div class="ano-hero">
         <div><span>Entradas</span><b class="pos">${formatarMoeda(ent)}</b></div>
         <div><span>Saídas</span><b class="neg">${formatarMoeda(sai)}</b><em>${f(pc(sai,ent))}% das entradas</em></div>
@@ -3168,7 +3228,7 @@
       <div class="ano-seg grande"><span style="width:${Math.min(100,pc(sai,ent))}%;background:var(--red)"></span><span style="width:${Math.min(100,pc(inv,ent))}%;background:var(--gold)"></span><span style="flex:1;background:var(--green)"></span></div>
       <div class="ano-leg"><span><i style="background:var(--red)"></i>Saídas</span><span><i style="background:var(--gold)"></i>Investimento</span><span><i style="background:var(--green)"></i>Sobra</span></div>
       ${linha('p1',a1,'var(--matheus)')}${linha('p2',a2,'var(--andreia)')}
-    </section>`;
+    </div>`;
   }
 
   function renderHistorico(){
@@ -3510,8 +3570,15 @@
       btn.onclick = e=>{
         const id = e.currentTarget.dataset.toggleOpcoes;
         const el = document.getElementById('opcoes-'+id);
-        el.classList.toggle('oculto');
-        e.currentTarget.textContent = el.classList.contains('oculto') ? 'mais opções' : 'menos opções';
+        if(!el) return;
+        const linha = e.currentTarget.closest('.linha-gasto');
+        const nome = linha ? (linha.querySelector('.categoria-nome-input')||{}).value : '';
+        fecharOpcoesSheet();
+        opcoesAberta = { el, pai: el.parentNode, prox: el.nextSibling };
+        document.getElementById('opcoesTitulo').textContent = nome ? 'Detalhes — '+nome : 'Detalhes do gasto';
+        document.getElementById('opcoesCorpo').appendChild(el);
+        el.classList.remove('oculto');
+        document.getElementById('modalOpcoes').classList.remove('oculto');
       };
     });
 
@@ -3851,6 +3918,114 @@
   document.getElementById('drawerShare').onclick=()=>{ abrirFecharDrawer(false); compartilharApp(); };
   document.querySelectorAll('[data-drawer-name]').forEach(el=>el.textContent=estado?.nomes?.[el.dataset.drawerName]||el.textContent);
 
+  // ---------- cartões que abrem e fecham ----------
+  const COLAPSO_PADRAO = { entradas:true, comparativo:true, ano:true, meses:true };
+  function lerColapso(){ try{ return JSON.parse(localStorage.getItem('cg-colapso')||'{}'); }catch(e){ return {}; } }
+  function salvarColapso(o){ try{ localStorage.setItem('cg-colapso', JSON.stringify(o)); }catch(e){} }
+  function chaveCardColapso(sec){
+    if(sec.dataset.cardId) return 'r-'+sec.dataset.cardId;
+    const view = sec.closest('.view-conteudo'); if(!view) return null;
+    const idx = Array.from(view.children).filter(x=>x.matches('section.card')).indexOf(sec);
+    return view.id + '-' + idx;
+  }
+  function aplicarColapsos(){
+    const st = lerColapso();
+    document.querySelectorAll('main section.card').forEach(sec=>{
+      const k = chaveCardColapso(sec); if(!k) return;
+      let v = st[k]; if(v===undefined) v = !!COLAPSO_PADRAO[sec.dataset.cardId];
+      sec.classList.toggle('colapsado', v);
+    });
+  }
+  document.addEventListener('click', e=>{
+    const alvo = e.target.closest('section.card .card-titulo, section.card .card-cabecalho');
+    if(!alvo) return;
+    if(e.target.closest('button, input, select, textarea, a, .pill-group')) return;
+    const sec = alvo.closest('section.card'); const k = chaveCardColapso(sec); if(!k) return;
+    const st = lerColapso(); const novo = !sec.classList.contains('colapsado');
+    st[k] = novo; salvarColapso(st); sec.classList.toggle('colapsado', novo);
+  });
+  (function(){
+    let t=null; const mo = new MutationObserver(()=>{ cancelAnimationFrame(t); t=requestAnimationFrame(aplicarColapsos); });
+    mo.observe(document.querySelector('main'), {childList:true, subtree:true});
+    aplicarColapsos();
+  })();
+  function abrirCardResumo(id){
+    const st = lerColapso(); st['r-'+id] = false; salvarColapso(st); aplicarColapsos();
+    document.querySelector('nav.tabbar button[data-tab="resumo"]').click();
+    setTimeout(()=>{ const el=document.querySelector(`[data-card-id="${id}"]`); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); }, 150);
+  }
+  document.getElementById('drawerAno').onclick = ()=>{ abrirFecharDrawer(false); abrirCardResumo('ano'); };
+
+  // ---------- detalhes do gasto (folha) ----------
+  let opcoesAberta = null;
+  function fecharOpcoesSheet(){
+    document.getElementById('modalOpcoes').classList.add('oculto');
+    if(opcoesAberta){
+      const {el, pai, prox} = opcoesAberta;
+      if(pai && pai.isConnected){ pai.insertBefore(el, prox && prox.parentNode===pai ? prox : null); el.classList.add('oculto'); }
+      opcoesAberta = null;
+    }
+  }
+  document.getElementById('fecharOpcoes').onclick = fecharOpcoesSheet;
+
+  // ---------- busca ----------
+  const buscaF = { pessoa:'todos', pag:'todos', status:'todos', periodo:'mes' };
+  function semAcento(t){ return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
+  function renderBuscaFiltros(){
+    function grupo(titulo, chave, opcoes){
+      return `<div class="busca-grupo"><span>${titulo}</span><div class="busca-chips">${opcoes.map(([v,r])=>`<button type="button" class="busca-chip ${buscaF[chave]===v?'ativo':''}" data-bf="${chave}" data-v="${v}">${r}</button>`).join('')}</div></div>`;
+    }
+    document.getElementById('buscaFiltros').innerHTML =
+      grupo('Período','periodo',[['mes','Este mês'],['todos','Todos os meses']]) +
+      grupo('Pessoa','pessoa',[['todos','Todos'],['p1',estado.nomes.p1],['p2',estado.nomes.p2]]) +
+      grupo('Pagamento','pag',[['todos','Todos'],['pix','Pix'],['dinheiro','Dinheiro'],['debito','Débito'],['credito','Crédito'],['objetivo','Objetivo']]) +
+      grupo('Situação','status',[['todos','Todos'],['pago','Pagos'],['pendente','Pendentes']]);
+    document.querySelectorAll('#buscaFiltros [data-bf]').forEach(b=>b.onclick=()=>{ buscaF[b.dataset.bf]=b.dataset.v; renderBuscaFiltros(); renderBuscaResultados(); });
+  }
+  function renderBuscaResultados(){
+    const q = semAcento(document.getElementById('buscaTexto').value.trim());
+    const meses = buscaF.periodo==='mes' ? [estado.mesAtual] : mesesOrdenados().slice().reverse();
+    const res = [];
+    meses.forEach(c=>{
+      const m = estado.meses[c]; if(!m) return;
+      ['p1','p2'].forEach(k=>{
+        if(buscaF.pessoa!=='todos' && buscaF.pessoa!==k) return;
+        m[k].gastos.forEach((it,i)=>{
+          if(!(Number(it.valor)>0)) return;
+          if(buscaF.pag!=='todos' && (it.pagamento||'')!==buscaF.pag) return;
+          if(buscaF.status==='pago' && !it.pago) return;
+          if(buscaF.status==='pendente' && it.pago) return;
+          if(q){
+            const alvo = semAcento(it.categoria+' '+(it.descricao||'')+' '+formatarMoeda(it.valor)+' '+String(it.valor).replace('.',','));
+            if(!alvo.includes(q)) return;
+          }
+          res.push({c,k,i,it});
+        });
+      });
+    });
+    const total = res.reduce((t,r)=>t+(Number(r.it.valor)||0),0);
+    const el = document.getElementById('buscaResultados');
+    if(!res.length){ el.innerHTML = '<p class="card-sub" style="margin:14px 0 0;text-align:center;">Nenhum lançamento encontrado.</p>'; return; }
+    el.innerHTML = `<div class="busca-total"><span>${res.length} ${res.length===1?'lançamento':'lançamentos'}</span><b>${formatarMoeda(total)}</b></div><div class="busca-lista">` + res.slice(0,150).map(r=>{
+      const pg = infoPagamento(r.it);
+      return `<button type="button" class="busca-item" data-c="${r.c}" data-k="${r.k}"><div class="busca-item-info"><b>${r.it.categoria}${r.it.descricao?' · '+r.it.descricao:''}</b><small>${rotuloMesCurto(r.c)} · ${estado.nomes[r.k]}${pg?' · '+pg.emoji+' '+pg.texto:''}${r.it.pago?' · ✅ pago':''}</small></div><span class="busca-item-valor">${formatarMoeda(r.it.valor)}</span></button>`;
+    }).join('') + '</div>' + (res.length>150?'<p class="card-sub" style="text-align:center;">Mostrando os 150 primeiros.</p>':'');
+    el.querySelectorAll('.busca-item').forEach(b=>b.onclick=()=>{
+      estado.mesAtual = b.dataset.c; obterMes(estado.mesAtual); atualizarCabecalhoMes(); renderTudo(); salvar();
+      document.getElementById('modalBusca').classList.add('oculto');
+      document.querySelector(`nav.tabbar button[data-tab="${b.dataset.k}"]`).click();
+    });
+  }
+  function abrirBusca(){
+    document.getElementById('modalBusca').classList.remove('oculto');
+    renderBuscaFiltros(); renderBuscaResultados();
+    setTimeout(()=>document.getElementById('buscaTexto').focus(),80);
+  }
+  document.getElementById('buscaTexto').addEventListener('input', renderBuscaResultados);
+  document.getElementById('fecharBusca').onclick = ()=>document.getElementById('modalBusca').classList.add('oculto');
+  document.getElementById('drawerBusca').onclick = ()=>{ abrirFecharDrawer(false); abrirBusca(); };
+  document.querySelectorAll('[data-abrir-busca]').forEach(b=>b.addEventListener('click', abrirBusca));
+
   // ---------- editar forma de pagamento de um gasto já existente ----------
   document.querySelectorAll('#editarPagamentoGrupo .pagamento-opcao').forEach(btn=>{
     btn.onclick = e=>{
@@ -3947,5 +4122,6 @@
     [o,o2].forEach(x=>x&&mo.observe(x,{childList:true,characterData:true,subtree:true}));
   })();
 </script>
+
 </body>
 </html>
