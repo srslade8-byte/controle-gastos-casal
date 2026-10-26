@@ -1,4 +1,4 @@
-const CACHE_NOME = 'controle-de-gastos-v24';
+const CACHE_NOME = 'controle-de-gastos-v31';
 const ARQUIVOS = [
   './',
   './index.html',
@@ -24,15 +24,24 @@ self.addEventListener('activate', (evento) => {
 });
 
 self.addEventListener('fetch', (evento) => {
-  evento.respondWith(
-    caches.match(evento.request).then((resposta) => {
-      return resposta || fetch(evento.request).then((res) => {
-        if (evento.request.method === 'GET' && res.ok) {
-          const copia = res.clone();
-          caches.open(CACHE_NOME).then((cache) => cache.put(evento.request, copia));
-        }
+  const req = evento.request;
+  if(req.method !== 'GET'){ return; }
+  const url = new URL(req.url);
+  const mesmoSite = url.origin === self.location.origin;
+  if(mesmoSite){
+    // rede primeiro: o app sempre abre na versão mais nova; sem internet usa o que está salvo
+    evento.respondWith(
+      fetch(req, {cache:'no-cache'}).then((res) => {
+        if(res.ok){ const copia = res.clone(); caches.open(CACHE_NOME).then((c) => c.put(req, copia)); }
         return res;
-      }).catch(() => resposta);
-    })
+      }).catch(() => caches.match(req).then((r) => r || caches.match('./index.html')))
+    );
+    return;
+  }
+  evento.respondWith(
+    caches.match(req).then((r) => r || fetch(req).then((res) => {
+      if(res.ok){ const copia = res.clone(); caches.open(CACHE_NOME).then((c) => c.put(req, copia)); }
+      return res;
+    }).catch(() => r))
   );
 });
