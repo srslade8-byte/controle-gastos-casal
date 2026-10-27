@@ -1370,6 +1370,43 @@
   .aporte-add input:focus{outline:none;}
   .btn-add-aporte{border:none;background:var(--green);color:#fff;font-weight:700;font-size:12px;padding:9px 12px;border-radius:11px;cursor:pointer;}
   .btn-del-aporte{border:none;background:var(--paper);color:var(--ink-soft);width:26px;height:26px;border-radius:50%;font-size:16px;line-height:1;cursor:pointer;}
+
+  .meta-sec{margin-top:10px;border-radius:18px;background:var(--paper);overflow:hidden;}
+  .meta-sec-head{width:100%;display:flex;align-items:center;gap:10px;border:none;background:none;padding:14px 16px;cursor:pointer;color:var(--ink);font-family:inherit;text-align:left;}
+  .meta-sec-head span{font-weight:700;font-size:13.5px;flex:1;}
+  .meta-sec-head em{font-style:normal;font-size:11.5px;color:var(--ink-soft);font-weight:600;}
+  .meta-sec-head i{width:8px;height:8px;flex:none;border-right:2px solid var(--ink-soft);border-bottom:2px solid var(--ink-soft);transform:rotate(45deg) translate(-2px,-2px);transition:transform .25s;}
+  .meta-sec.aberta .meta-sec-head i{transform:rotate(-135deg) translate(-2px,-2px);}
+  .meta-sec-corpo{display:none;padding:0 14px 14px;}
+  .meta-sec.aberta .meta-sec-corpo{display:block;}
+
+  .sub-sec{margin-top:12px;border-radius:18px;background:var(--paper);padding:0 14px 14px;}
+  .sub-head{width:100%;display:flex;align-items:center;gap:10px;border:none;background:none;padding:14px 0 10px;cursor:pointer;color:var(--ink);font-family:'Poppins',sans-serif;text-align:left;}
+  .sub-head span{font-weight:600;font-size:15px;flex:1;}
+  .sub-head em{font-style:normal;font-size:13px;font-weight:700;color:var(--ink-soft);font-family:'Inter',sans-serif;}
+  .sub-head i{width:8px;height:8px;flex:none;border-right:2px solid var(--ink-soft);border-bottom:2px solid var(--ink-soft);transform:rotate(-135deg) translate(-2px,-2px);transition:transform .25s;}
+  .sub-sec.fechada .sub-head i{transform:rotate(45deg) translate(-2px,-2px);}
+  .sub-sec.fechada{padding-bottom:0;}
+  .sub-sec.fechada .sub-corpo{display:none;}
+  .sub-sec.fechada .sub-head{padding-bottom:14px;}
+  .sub-corpo .card-sub{margin:0 0 10px;}
+  .sub-sec .salario-row{background:var(--white);}
+  .sub-sec .renda-extra-row{margin-top:0;padding:0;background:none;}
+  .sub-sec .re-add{background:var(--white);}
+  .sub-sec .re-item{background:var(--white);}
+  .meta-header-topo{gap:8px;flex-wrap:wrap;align-items:center;}
+  .meta-header-topo .meta-header-nome{flex:0 1 auto;}
+  .meta-header-topo .meta-header-seta{margin-left:auto;}
+  .meta-tempo-chip{font-size:11px;font-weight:700;color:var(--green);background:var(--green-soft);padding:4px 10px;border-radius:10px;white-space:nowrap;}
+  .meta-mini-barras{height:auto;min-height:92px;gap:10px;padding-top:6px;}
+  .meta-mini-grupo{width:66px;}
+  .meta-mini-valor{font-size:10px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums;}
+  .meta-mini-barra{width:22px;border-radius:7px 7px 2px 2px;}
+  .meta-mini-mes{font-size:10px;font-weight:600;}
+  .renda-extra-row input.input-renda-desc{font-size:12.5px;font-weight:500;font-family:inherit;padding:10px 12px;width:100%;margin-top:8px;border:none;background:var(--white);border-radius:12px;padding:10px 12px;font-size:12.5px;font-family:inherit;color:var(--ink);}
+  .input-renda-desc:focus{outline:none;box-shadow:0 0 0 2px color-mix(in srgb,var(--green) 40%,transparent);}
+  .re-val{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;}
+  .re-desc{font-weight:500;color:var(--ink-soft);font-size:12px;}
 </style>
 </head>
 <body>
@@ -2328,6 +2365,7 @@
           });
         });
       }
+      recalcContribuicoes(meta);
     });
     if(!obj.layoutResumo) obj.layoutResumo = ["renda","entradas","comparativo","categorias","metas","ano","meses"];
     if(!obj.layoutResumo.includes("entradas")) obj.layoutResumo.splice(1,0,"entradas");
@@ -2506,7 +2544,9 @@
         <span class="selo ${chave}">${nome.charAt(0).toUpperCase()}</span>
         <input type="text" class="pessoa-nome-input" data-pessoa-nome="${chave}" value="${nome}">
       </div>
-      <p class="card-titulo" style="margin-top:2px;">Salário do mês</p>
+      <div class="sub-sec ${subFechado(chave+'-sal')?'fechada':''}">
+      <button type="button" class="sub-head" data-sub="${chave}-sal"><span>Salário do mês</span><em>${formatarMoeda(p.salario)}</em><i></i></button>
+      <div class="sub-corpo">
       <p class="card-sub">Quanto ${nome} recebeu esse mês.</p>
       <div class="salario-row"><span class="prefixo">R$</span><input type="text" inputmode="decimal" class="input-salario" data-pessoa="${chave}" value="${formatarValorInput(p.salario)}" placeholder="0,00"></div>
       ${(() => {
@@ -2521,11 +2561,16 @@
         const sobraAnteriorValor = sobraPessoaMes(chave, mesAnteriorChave);
         return `<button type="button" class="btn-trazer-saldo" data-pessoa="${chave}" data-valor-trazer="${sobraAnteriorValor}">↩️ Trazer o que sobrou do mês anterior (${formatarMoeda(sobraAnteriorValor)})</button>`;
       })()}
+      </div></div>
+      <div class="sub-sec ${subFechado(chave+'-ext')?'fechada':''}">
+      <button type="button" class="sub-head" data-sub="${chave}-ext"><span>Renda extra do mês</span><em>${formatarMoeda(p.rendaExtra)}</em><i></i></button>
+      <div class="sub-corpo">
       <div class="renda-extra-row">
-        <label>Renda extra <b class="re-total">${formatarMoeda(p.rendaExtra)} no mês</b></label>
         <div class="re-add"><span>R$</span><input type="text" inputmode="decimal" class="input-renda-extra" data-pessoa="${chave}" value="" placeholder="0,00"><button type="button" class="btn-add-renda-extra" data-pessoa="${chave}">Adicionar</button></div>
-        ${(p.rendasExtras||[]).length ? `<div class="re-lista">${p.rendasExtras.slice().reverse().map(r=>`<div class="re-item"><span class="re-val">+ ${formatarMoeda(r.valor)}</span><span class="re-data">${new Date(r.quando).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}</span><button type="button" class="btn-del-renda-extra" data-pessoa="${chave}" data-id="${r.id}" aria-label="Remover">×</button></div>`).join('')}</div>` : `<p class="re-vazio">Cada vez que receber um extra, digite o valor e toque em Adicionar. Eles se somam sozinhos.</p>`}
+        <input type="text" class="input-renda-desc" data-pessoa="${chave}" maxlength="40" placeholder="De onde veio? (opcional)" autocomplete="off">
+        ${(p.rendasExtras||[]).length ? `<div class="re-lista">${p.rendasExtras.slice().reverse().map(r=>`<div class="re-item"><span class="re-val">+ ${formatarMoeda(r.valor)}${r.descricao ? ` <span class="re-desc">(${String(r.descricao).replace(/</g,'&lt;')})</span>` : ''}</span><span class="re-data">${new Date(r.quando).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}</span><button type="button" class="btn-del-renda-extra" data-pessoa="${chave}" data-id="${r.id}" aria-label="Remover">×</button></div>`).join('')}</div>` : `<p class="re-vazio">Cada vez que receber um extra, digite o valor e toque em Adicionar. Eles se somam sozinhos.</p>`}
       </div>
+      </div></div>
     </section>`;
 
     html += `<section class="card">
@@ -2896,6 +2941,44 @@
     return Math.min(100, (totalGuardadoMeta(meta)/alvo)*100);
   }
 
+  const metaSecAberta = {};
+  function secAb(id, k){ return metaSecAberta[id]===k; }
+  function tempoConclusaoMeta(m){
+    if(!metaConcluida(m)) return null;
+    const alvo = Number(m.valorObjetivo)||0;
+    const ev = [];
+    (m.aportes||[]).forEach(a=>ev.push({t:new Date(a.quando).getTime(), v:Number(a.valor)||0}));
+    (m.rendimentos||[]).forEach(r=>ev.push({t:new Date(r.quando).getTime(), v:Number(r.valor)||0}));
+    (m.retiradas||[]).forEach(r=>ev.push({t:new Date(r.quando).getTime(), v:-(Number(r.valor)||0)}));
+    const validos = ev.filter(e=>!isNaN(e.t)).sort((a,b)=>a.t-b.t);
+    const ini = Number(m.saldoInicial)||0;
+    const idm = /^m(\d{13})/.exec(String(m.id||''));
+    const criacao = idm ? Number(idm[1]) : null;
+    const positivos = validos.filter(e=>e.v>0);
+    let inicio = null;
+    if(ini>0 && criacao) inicio = criacao;
+    if(positivos.length){ const primeiro = positivos[0].t; inicio = inicio===null ? primeiro : Math.min(inicio, primeiro); }
+    if(inicio===null) return null;
+    let acum = ini, fim = null;
+    if(acum>=alvo && criacao) fim = criacao;
+    for(const e of validos){ acum += e.v; if(acum>=alvo){ fim = e.t; break; } }
+    if(fim===null) fim = validos.length ? validos[validos.length-1].t : inicio;
+    if(fim<inicio) fim = inicio;
+    const dias = Math.floor((fim-inicio)/86400000);
+    let txt;
+    if(dias<1) txt = 'no mesmo dia';
+    else if(dias<31) txt = dias+(dias===1?' dia':' dias');
+    else {
+      const meses = Math.floor(dias/30.4375), resto = Math.round(dias-meses*30.4375);
+      const anos = Math.floor(meses/12), mm = meses%12;
+      const partes = [];
+      if(anos) partes.push(anos+(anos===1?' ano':' anos'));
+      if(mm) partes.push(mm+(mm===1?' mês':' meses'));
+      if(!anos && resto>0) partes.push(resto+(resto===1?' dia':' dias'));
+      txt = partes.join(' e ');
+    }
+    return txt;
+  }
   function infoPrazoMeta(m){
     if(!m.prazo) return null;
     const falta = faltaMeta(m);
@@ -2962,6 +3045,7 @@
         const v = contribuicaoMetaPessoa(m,c,'p1') + contribuicaoMetaPessoa(m,c,'p2');
         const h = Math.max(3, Math.round((v/maiorAporte)*50));
         return `<div class="meta-mini-grupo">
+          <span class="meta-mini-valor" style="color:var(--gold)">${formatarMoeda(v)}</span>
           <div class="meta-mini-barra" style="height:${h}px;background:var(--gold)" title="${formatarMoeda(v)}"></div>
           <span class="meta-mini-mes">${rotuloMesCurto(c)}</span>
         </div>`;
@@ -2972,12 +3056,13 @@
         const c = chaveMes(new Date(r.quando));
         rendimentoPorMes[c] = (rendimentoPorMes[c]||0) + (Number(r.valor)||0);
       });
-      const mesesRendimento = mesesOrdenados().filter(c=>rendimentoPorMes[c]>0).slice(-8);
+      const mesesRendimento = Object.keys(rendimentoPorMes).filter(c=>rendimentoPorMes[c]>0).sort().slice(-8);
       const maiorRendimento = Math.max(1, ...mesesRendimento.map(c=>rendimentoPorMes[c]));
       const miniBarrasRendimento = mesesRendimento.length ? mesesRendimento.map(c=>{
         const v = rendimentoPorMes[c];
         const h = Math.max(3, Math.round((v/maiorRendimento)*50));
         return `<div class="meta-mini-grupo">
+          <span class="meta-mini-valor" style="color:var(--green)">${formatarMoeda(v)}</span>
           <div class="meta-mini-barra" style="height:${h}px;background:var(--green)" title="${formatarMoeda(v)}"></div>
           <span class="meta-mini-mes">${rotuloMesCurto(c)}</span>
         </div>`;
@@ -2990,7 +3075,7 @@
       return `<div class="card meta-card ${expandida?'expandida':''}" data-meta-card-id="${m.id}" style="border:1px solid var(--line);border-radius:14px;padding:16px;background:var(--paper);">
         <div class="meta-card-header" data-meta-toggle="${m.id}">
           <div class="meta-header-topo">
-            <span class="meta-header-nome">${m.nome}</span>
+            <span class="meta-header-nome">${m.nome}</span>${(()=>{ const t=tempoConclusaoMeta(m); return t ? `<span class="meta-tempo-chip">⏱ ${t==='no mesmo dia'?'concluído no mesmo dia':'concluído em '+t}</span>` : ''; })()}
             <span class="meta-header-seta ${expandida?'aberto':''}">⌄</span>
           </div>
           <div class="meta-progress-bg"><div class="meta-progress-fill" style="width:${pct}%"></div></div>
@@ -2999,6 +3084,9 @@
         </div>
         <div class="meta-detalhe ${expandida?'':'oculto'}" id="meta-detalhe-${m.id}">
           <input type="text" class="meta-nome-input" data-meta-id="${m.id}" data-meta-campo="nome" value="${m.nome}">
+          <div class="meta-sec ${secAb(m.id,'dados')?'aberta':''}">
+          <button type="button" class="meta-sec-head" data-meta-sec="${m.id}|dados"><span>Dados e investimento</span><em>${formatarMoeda(contribP1+contribP2)} neste mês</em><i></i></button>
+          <div class="meta-sec-corpo">
           <div class="meta-campo meta-campo-wide">
             <label>Prazo para concluir (opcional)</label>
             <div class="caixa"><input type="month" data-meta-id="${m.id}" data-meta-campo="prazo" value="${m.prazo||''}"></div>
@@ -3019,6 +3107,11 @@
             ${(()=>{ const lista=(m.aportes||[]).filter(a=>a.mes===estado.mesAtual).slice().reverse(); return lista.length ? `<div class="re-lista">${lista.map(a=>`<div class="re-item"><span class="re-val">+ ${formatarMoeda(a.valor)}</span><span class="re-data">${estado.nomes[a.pessoa]} · ${new Date(a.quando).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}</span><button type="button" class="btn-del-aporte" data-meta-id="${m.id}" data-id="${a.id}" aria-label="Remover">×</button></div>`).join('')}</div>` : `<p class="re-vazio">Cada vez que investir neste objetivo, digite o valor e toque em Adicionar. Os valores se somam sozinhos.</p>`; })()}
           </div>
 
+          </div></div>
+
+          <div class="meta-sec ${secAb(m.id,'rend')?'aberta':''}">
+          <button type="button" class="meta-sec-head" data-meta-sec="${m.id}|rend"><span>Rendimento</span><em>${formatarMoeda(rendimentoTotal)} no total</em><i></i></button>
+          <div class="meta-sec-corpo">
           <div class="meta-rendimento-bloco">
             <label>Rendimento</label>
             <div class="meta-rendimento-modo">
@@ -3033,12 +3126,18 @@
             <p class="meta-rendimento-total">Rendimento total: <b>${formatarMoeda(rendimentoTotal)}</b></p>
           </div>
 
+          </div></div>
+
+          <div class="meta-sec ${secAb(m.id,'graf')?'aberta':''}">
+          <button type="button" class="meta-sec-head" data-meta-sec="${m.id}|graf"><span>Gráficos e retiradas</span><em>por mês</em><i></i></button>
+          <div class="meta-sec-corpo">
           <p class="meta-historico-titulo">Guardado por mês</p>
           <div class="meta-mini-barras">${miniBarras}</div>
           <p class="meta-historico-titulo">Rendimento por mês</p>
           <div class="meta-mini-barras">${miniBarrasRendimento}</div>
           ${(m.retiradas&&m.retiradas.length) ? `<p class="meta-historico-titulo">Retirado para pagar contas</p>
           <div class="meta-retiradas-lista">${m.retiradas.slice().reverse().map(r=>`<div class="meta-retirada-item"><span>${r.descricao||'Pagamento'}</span><span>− ${formatarMoeda(r.valor)}</span></div>`).join('')}</div>` : ''}
+          </div></div>
           <div class="meta-remover-linha"><button data-remover-meta="${m.id}">Remover objetivo</button></div>
         </div>
       </div>`;
@@ -3066,6 +3165,13 @@
       };
     });
 
+    document.querySelectorAll('[data-meta-sec]').forEach(b=>{
+      b.onclick = ()=>{
+        const [id,k] = b.dataset.metaSec.split('|');
+        metaSecAberta[id] = metaSecAberta[id]===k ? null : k;
+        renderMetas(); ligarEventosMetas();
+      };
+    });
     document.querySelectorAll('[data-meta-campo="prazo"]').forEach(inp=>{
       inp.onchange = e=>{
         const meta = estado.metas.find(m=>m.id===e.target.dataset.metaId);
@@ -3500,13 +3606,18 @@
       if(!(v>0)){ inp.focus(); return; }
       const d = dadosPessoa(chaveP);
       if(!Array.isArray(d.rendasExtras)) d.rendasExtras = [];
-      d.rendasExtras.push({ id:'re-'+Date.now()+Math.random().toString(16).slice(2), valor:v, quando:new Date().toISOString() });
+      const descEl = document.querySelector(`.input-renda-desc[data-pessoa="${chaveP}"]`);
+      const descricao = descEl ? descEl.value.trim() : '';
+      d.rendasExtras.push({ id:'re-'+Date.now()+Math.random().toString(16).slice(2), valor:v, descricao, quando:new Date().toISOString() });
       somarRendasExtras(d);
       renderTudo(); salvar();
     }
     document.querySelectorAll('.input-renda-extra').forEach(inp=>{
       inp.addEventListener('focus', ()=>setTimeout(()=>inp.select(),0));
       inp.oninput = e=>{ e.target.value = saneandoDigitacaoMoeda(e.target.value); };
+      inp.onkeydown = e=>{ if(e.key==='Enter'){ e.preventDefault(); adicionarRendaExtra(e.target.dataset.pessoa); } };
+    });
+    document.querySelectorAll('.input-renda-desc').forEach(inp=>{
       inp.onkeydown = e=>{ if(e.key==='Enter'){ e.preventDefault(); adicionarRendaExtra(e.target.dataset.pessoa); } };
     });
     document.querySelectorAll('.btn-add-renda-extra').forEach(b=>{ b.onclick = ()=>adicionarRendaExtra(b.dataset.pessoa); });
@@ -4138,6 +4249,18 @@
     document.addEventListener('mouseup', terminar);
     view.addEventListener('contextmenu', e=>{ if(cartaoDe(e.target)) e.preventDefault(); });
   })();
+
+
+  // ---------- salário / renda extra: minimizar separadamente ----------
+  function lerSub(){ try{ return JSON.parse(localStorage.getItem('cg-sub')||'{}'); }catch(e){ return {}; } }
+  function subFechado(k){ return !!lerSub()[k]; }
+  document.addEventListener('click', e=>{
+    const b = e.target.closest('[data-sub]'); if(!b) return;
+    const sec = b.closest('.sub-sec'); const fechada = !sec.classList.contains('fechada');
+    sec.classList.toggle('fechada', fechada);
+    const st = lerSub(); st[b.dataset.sub] = fechada;
+    try{ localStorage.setItem('cg-sub', JSON.stringify(st)); }catch(err){}
+  });
 
   // ---------- editar forma de pagamento de um gasto já existente ----------
   document.querySelectorAll('#editarPagamentoGrupo .pagamento-opcao').forEach(btn=>{
