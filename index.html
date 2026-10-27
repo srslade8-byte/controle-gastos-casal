@@ -1353,6 +1353,23 @@
   .busca-item-info small{font-size:11px;color:var(--ink-soft);}
   .busca-item-valor{font-weight:700;font-size:13px;font-variant-numeric:tabular-nums;}
   nav.tabbar button{font-size:11px;}
+
+  .dica-reordenar{order:99;margin:0 0 12px;text-align:center;font-size:11px;color:var(--ink-soft);}
+  .acao-compartilhar{order:100;}
+  .arrastando{position:relative;z-index:30;box-shadow:var(--shadow-pop) !important;transition:none !important;animation:none !important;}
+  body.reordenando{user-select:none;-webkit-user-select:none;cursor:grabbing;}
+  body.reordenando #viewResumo section.card{animation:none !important;}
+  #viewResumo .card-cabecalho,#viewResumo .card-titulo{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;}
+  .aporte-bloco{margin:12px 0;padding:12px 14px;border-radius:18px;background:var(--green-soft);}
+  .aporte-bloco > label{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;font-weight:600;color:var(--ink-soft);margin-bottom:8px;}
+  .aporte-total{color:var(--green);font-size:12px;}
+  .aporte-add{display:flex;align-items:center;gap:8px;background:var(--white);border-radius:14px;padding:6px 6px 6px 12px;margin-bottom:8px;}
+  .aporte-quem{font-size:11.5px;font-weight:700;color:var(--ink-soft);max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .aporte-rs{color:var(--ink-soft);font-weight:600;font-size:13px;}
+  .aporte-add input{flex:1;min-width:0;border:none;background:transparent;font-size:16px;font-weight:600;font-family:'Poppins',sans-serif;color:var(--ink);}
+  .aporte-add input:focus{outline:none;}
+  .btn-add-aporte{border:none;background:var(--green);color:#fff;font-weight:700;font-size:12px;padding:9px 12px;border-radius:11px;cursor:pointer;}
+  .btn-del-aporte{border:none;background:var(--paper);color:var(--ink-soft);width:26px;height:26px;border-radius:50%;font-size:16px;line-height:1;cursor:pointer;}
 </style>
 </head>
 <body>
@@ -1566,6 +1583,8 @@
         <p class="card-sub" style="margin:16px 0 8px;font-weight:600;">Todos os meses</p>
         <div id="histLista"></div>
       </section>
+
+      <p class="dica-reordenar">Dica: segure o título de um cartão por um instante e arraste para mudar a ordem.</p>
 
       <div class="acao-compartilhar">
         <button class="btn-compartilhar" id="btnCompartilharResumo">🔗 Compartilhar resumo do mês</button>
@@ -2106,6 +2125,14 @@
     },0);
   }
   function totalSaidasPessoa(p, chavePessoa){ return totalPessoa(p) + investimentoPessoaMes(chavePessoa); }
+  function recalcContribuicoes(meta){
+    const c = {};
+    (meta.aportes||[]).forEach(a=>{
+      if(!c[a.mes]) c[a.mes] = {p1:0,p2:0};
+      c[a.mes][a.pessoa] = Math.round(((c[a.mes][a.pessoa]||0) + (Number(a.valor)||0))*100)/100;
+    });
+    meta.contribuicoes = c;
+  }
   function contribuicaoMetaPessoa(meta, mes, pessoa){
     const valor = (meta.contribuicoes||{})[mes];
     if(valor && typeof valor === 'object') return Number(valor[pessoa])||0;
@@ -2292,6 +2319,15 @@
         if(typeof valor !== 'object') meta.contribuicoes[mes] = {p1:Number(valor)||0,p2:0};
         else meta.contribuicoes[mes] = {p1:Number(valor.p1)||0,p2:Number(valor.p2)||0};
       });
+      if(!Array.isArray(meta.aportes)){
+        meta.aportes = [];
+        Object.keys(meta.contribuicoes).forEach(mes=>{
+          ['p1','p2'].forEach(k=>{
+            const v = Number(meta.contribuicoes[mes][k])||0;
+            if(v>0) meta.aportes.push({ id:'ap-'+mes+'-'+k, mes, pessoa:k, valor:v, quando:mes+'-01T12:00:00' });
+          });
+        });
+      }
     });
     if(!obj.layoutResumo) obj.layoutResumo = ["renda","entradas","comparativo","categorias","metas","ano","meses"];
     if(!obj.layoutResumo.includes("entradas")) obj.layoutResumo.splice(1,0,"entradas");
@@ -2977,15 +3013,11 @@
               <div class="caixa"><span>R$</span><input type="text" inputmode="decimal" data-meta-id="${m.id}" data-meta-campo="saldoInicial" value="${formatarValorInput(saldoInicial)}" placeholder="0,00"></div>
             </div>
           </div>
-          <div class="meta-campo meta-campo-wide">
-            <label>Investimento no objetivo deste mês — ${estado.nomes.p1}</label>
-            <div class="caixa"><span>R$</span><input type="text" inputmode="decimal" data-meta-id="${m.id}" data-meta-campo="contribuicaoMes" data-meta-pessoa="p1" value="${formatarValorInput(contribP1)}" placeholder="0,00"></div>
+          <div class="aporte-bloco">
+            <label>Investimento neste mês <b class="aporte-total">${formatarMoeda(contribP1+contribP2)}</b></label>
+            ${['p1','p2'].map(k=>`<div class="aporte-add"><span class="aporte-quem">${estado.nomes[k]}</span><span class="aporte-rs">R$</span><input type="text" inputmode="decimal" id="aporteValor-${m.id}-${k}" placeholder="0,00"><button type="button" class="btn-add-aporte" data-meta-id="${m.id}" data-meta-pessoa="${k}">Adicionar</button></div>`).join('')}
+            ${(()=>{ const lista=(m.aportes||[]).filter(a=>a.mes===estado.mesAtual).slice().reverse(); return lista.length ? `<div class="re-lista">${lista.map(a=>`<div class="re-item"><span class="re-val">+ ${formatarMoeda(a.valor)}</span><span class="re-data">${estado.nomes[a.pessoa]} · ${new Date(a.quando).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}</span><button type="button" class="btn-del-aporte" data-meta-id="${m.id}" data-id="${a.id}" aria-label="Remover">×</button></div>`).join('')}</div>` : `<p class="re-vazio">Cada vez que investir neste objetivo, digite o valor e toque em Adicionar. Os valores se somam sozinhos.</p>`; })()}
           </div>
-          <div class="meta-campo meta-campo-wide">
-            <label>Investimento no objetivo deste mês — ${estado.nomes.p2}</label>
-            <div class="caixa"><span>R$</span><input type="text" inputmode="decimal" data-meta-id="${m.id}" data-meta-campo="contribuicaoMes" data-meta-pessoa="p2" value="${formatarValorInput(contribP2)}" placeholder="0,00"></div>
-          </div>
-          <p class="mini-info">O valor deste mês será somado automaticamente ao que já está guardado.</p>
 
           <div class="meta-rendimento-bloco">
             <label>Rendimento</label>
@@ -3073,18 +3105,32 @@
         salvar();
       };
     });
-    document.querySelectorAll('[data-meta-campo="contribuicaoMes"]').forEach(inp=>{
-      ligarCampoMoeda(inp);
-      inp.oninput = e=>{
-        e.target.value = saneandoDigitacaoMoeda(e.target.value);
-        const meta = estado.metas.find(m=>m.id===e.target.dataset.metaId);
-        if(!meta.contribuicoes) meta.contribuicoes = {};
-        const atual = meta.contribuicoes[estado.mesAtual];
-        const valores = atual && typeof atual === 'object' ? atual : {p1:Number(atual)||0,p2:0};
-        valores[e.target.dataset.metaPessoa] = paraNumero(e.target.value);
-        meta.contribuicoes[estado.mesAtual] = {p1:Number(valores.p1)||0,p2:Number(valores.p2)||0};
-        atualizarVisualMeta(meta.id); renderMetasResumo(); renderResumo();
-        salvar();
+    function aposMudarAporte(){ renderMetas(); renderMetasResumo(); renderResumo(); ligarEventosMetas(); salvar(); }
+    document.querySelectorAll('.btn-add-aporte').forEach(btn=>{
+      const metaId = btn.dataset.metaId, k = btn.dataset.metaPessoa;
+      const inp = document.getElementById(`aporteValor-${metaId}-${k}`);
+      inp.addEventListener('focus', ()=>setTimeout(()=>inp.select(),0));
+      inp.oninput = e=>{ e.target.value = saneandoDigitacaoMoeda(e.target.value); };
+      const adicionar = ()=>{
+        const v = paraNumero(inp.value);
+        if(!(v>0)){ inp.focus(); return; }
+        const meta = estado.metas.find(m=>m.id===metaId);
+        if(!Array.isArray(meta.aportes)) meta.aportes = [];
+        meta.aportes.push({ id:'ap-'+Date.now()+Math.random().toString(16).slice(2), mes:estado.mesAtual, pessoa:k, valor:v, quando:new Date().toISOString() });
+        recalcContribuicoes(meta);
+        aposMudarAporte();
+      };
+      btn.onclick = adicionar;
+      inp.onkeydown = e=>{ if(e.key==='Enter'){ e.preventDefault(); adicionar(); } };
+    });
+    document.querySelectorAll('.btn-del-aporte').forEach(btn=>{
+      btn.onclick = ()=>{
+        pedirConfirmacao('Remover esse valor investido?', ()=>{
+          const meta = estado.metas.find(m=>m.id===btn.dataset.metaId);
+          meta.aportes = (meta.aportes||[]).filter(a=>a.id!==btn.dataset.id);
+          recalcContribuicoes(meta);
+          aposMudarAporte();
+        });
       };
     });
     document.querySelectorAll('[data-rendimento-modo]').forEach(btn=>{
@@ -3143,7 +3189,7 @@
     const nome = document.getElementById('novaMetaNome').value.trim();
     const valor = paraNumero(document.getElementById('novaMetaValor').value);
     if(!nome){ document.getElementById('novaMetaNome').focus(); return; }
-    estado.metas.push({ id: 'm'+Date.now()+Math.random().toString(16).slice(2), nome, valorObjetivo: valor, saldoInicial: 0, contribuicoes:{}, retiradas:[], rendimentos:[], rendimentoModo:'dia' });
+    estado.metas.push({ id: 'm'+Date.now()+Math.random().toString(16).slice(2), nome, valorObjetivo: valor, saldoInicial: 0, contribuicoes:{}, aportes:[], retiradas:[], rendimentos:[], rendimentoModo:'dia' });
     document.getElementById('novaMetaNome').value = "";
     document.getElementById('novaMetaValor').value = "";
     document.getElementById('formNovaMeta').classList.remove('aberto');
@@ -4025,6 +4071,73 @@
   document.getElementById('fecharBusca').onclick = ()=>document.getElementById('modalBusca').classList.add('oculto');
   document.getElementById('drawerBusca').onclick = ()=>{ abrirFecharDrawer(false); abrirBusca(); };
   document.querySelectorAll('[data-abrir-busca]').forEach(b=>b.addEventListener('click', abrirBusca));
+
+
+  // ---------- segurar e arrastar para reordenar os cartões do Resumo ----------
+  (function(){
+    const view = document.getElementById('viewResumo');
+    let cand=null, drag=null, timer=null;
+    const interativo = 'button, input, select, textarea, a, .pill-group';
+    function cartaoDe(t){ const h = t.closest && t.closest('#viewResumo .card-cabecalho'); return h ? h.closest('section.card[data-card-id]') : null; }
+    function ordem(){ return Array.from(view.querySelectorAll(':scope > section.card[data-card-id]')).sort((a,b)=>(parseInt(a.style.order)||0)-(parseInt(b.style.order)||0)); }
+    function comecar(card, y){
+      drag = { card, grab: y - card.getBoundingClientRect().top, y, ty:0, scroll:null };
+      card.classList.add('arrastando'); document.body.classList.add('reordenando');
+      try{ navigator.vibrate && navigator.vibrate(30); }catch(e){}
+      drag.scroll = setInterval(()=>{
+        if(!drag) return;
+        if(drag.y < 110) window.scrollBy(0,-14); else if(drag.y > window.innerHeight-130) window.scrollBy(0,14); else return;
+        atualizar();
+      }, 16);
+    }
+    function posicionar(card){
+      const r = card.getBoundingClientRect(); const natural = r.top - drag.ty;
+      drag.ty = drag.y - drag.grab - natural;
+      card.style.transform = `translateY(${drag.ty}px) scale(1.02)`;
+    }
+    function atualizar(){
+      const card = drag.card; posicionar(card);
+      const r = card.getBoundingClientRect();
+      const centro = r.top + r.height/2;
+      const outros = ordem().filter(c=>c!==card);
+      let idx = 0; outros.forEach(c=>{ const b=c.getBoundingClientRect(); if(b.top + b.height/2 < centro) idx++; });
+      const nova = outros.slice(); nova.splice(idx,0,card);
+      let mudou = false;
+      nova.forEach((c,i)=>{ if(parseInt(c.style.order)!==i){ c.style.order = i; mudou = true; } });
+      if(mudou) posicionar(card);
+    }
+    function terminar(){
+      clearTimeout(timer); cand = null;
+      if(!drag) return;
+      clearInterval(drag.scroll);
+      drag.card.classList.remove('arrastando'); drag.card.style.transform = '';
+      document.body.classList.remove('reordenando');
+      estado.layoutResumo = ordem().map(c=>c.dataset.cardId);
+      drag = null; salvar();
+      arrastouAgora = true; setTimeout(()=>{ arrastouAgora = false; }, 400);
+    }
+    let arrastouAgora = false;
+    document.addEventListener('click', e=>{ if(arrastouAgora){ e.stopPropagation(); e.preventDefault(); } }, true);
+    function inicio(t, x, y){
+      if(t.closest(interativo)) return;
+      const card = cartaoDe(t); if(!card) return;
+      cand = { card, x, y };
+      clearTimeout(timer);
+      timer = setTimeout(()=>{ if(cand){ comecar(cand.card, cand.y); cand = null; } }, 450);
+    }
+    function movimento(x, y, ev){
+      if(drag){ if(ev && ev.cancelable) ev.preventDefault(); drag.y = y; atualizar(); return; }
+      if(cand && (Math.abs(x-cand.x) > 10 || Math.abs(y-cand.y) > 10)){ clearTimeout(timer); cand = null; }
+    }
+    view.addEventListener('touchstart', e=>{ const t=e.touches[0]; inicio(e.target, t.clientX, t.clientY); }, {passive:true});
+    document.addEventListener('touchmove', e=>{ const t=e.touches[0]; movimento(t.clientX, t.clientY, e); }, {passive:false});
+    document.addEventListener('touchend', terminar);
+    document.addEventListener('touchcancel', terminar);
+    view.addEventListener('mousedown', e=>{ if(e.button===0) inicio(e.target, e.clientX, e.clientY); });
+    document.addEventListener('mousemove', e=>movimento(e.clientX, e.clientY, e));
+    document.addEventListener('mouseup', terminar);
+    view.addEventListener('contextmenu', e=>{ if(cartaoDe(e.target)) e.preventDefault(); });
+  })();
 
   // ---------- editar forma de pagamento de um gasto já existente ----------
   document.querySelectorAll('#editarPagamentoGrupo .pagamento-opcao').forEach(btn=>{
